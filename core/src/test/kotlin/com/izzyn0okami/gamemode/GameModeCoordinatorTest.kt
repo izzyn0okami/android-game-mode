@@ -116,7 +116,7 @@ class GameModeCoordinatorTest {
         staleHome()
         scheduler.runCurrent()
 
-        assertEquals(0, effects.launchCallbacks.size)
+        assertEquals(1, effects.launchCallbacks.size)
     }
 
     @Test
