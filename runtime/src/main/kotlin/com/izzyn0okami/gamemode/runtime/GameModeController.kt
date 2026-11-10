@@ -25,6 +25,7 @@ import com.izzyn0okami.gamemode.GameModeScheduler
 class GameModeController(
     context: Context,
     private val actionHandler: GameModeActionHandler,
+    private val onDevicesChanged: (List<ObservedInputDevice>) -> Unit = {},
     exitGracePeriodMs: Long = GameModeCoordinator.DEFAULT_EXIT_GRACE_PERIOD_MS,
 ) {
     private val appContext = context.applicationContext
@@ -60,6 +61,7 @@ class GameModeController(
     )
 
     private val gamepadMonitor = GamepadMonitor(appContext) { devices ->
+        onDevicesChanged(devices)
         coordinator.onControllersChanged(devices.count { it.classification.eligible })
     }
 
