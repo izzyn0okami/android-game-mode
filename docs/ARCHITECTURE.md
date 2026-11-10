@@ -21,33 +21,23 @@ Ações emitidas:
 - agendar/cancelar período de tolerância;
 - solicitar retorno à atividade HOME padrão.
 
-Se um controle reaparecer enquanto a navegação HOME já estiver em andamento, a máquina aguarda a conclusão dessa navegação e então solicita nova entrada, desde que a tela continue interativa e desbloqueada. Se o controle desaparecer enquanto a máquina aguarda o desbloqueio, o estado volta para `IDLE`.
+### Classificador e monitor Android
 
-### Classificador (`core`)
+O classificador aceita dispositivos externos, não virtuais, que anunciam `SOURCE_GAMEPAD` ou `SOURCE_JOYSTICK`. Teclados e mouses sem fontes de jogo são ignorados.
 
-Um dispositivo é elegível quando é externo, não virtual e anuncia `SOURCE_GAMEPAD` ou `SOURCE_JOYSTICK`. Teclado/mouse sem fontes de jogo são ignorados. Fontes combinadas não desqualificam um controle.
+O módulo `runtime` contém `GamepadMonitor`, que enumera dispositivos existentes, registra `InputDeviceListener`, reenumera o conjunto após alterações e entrega snapshots classificados. O APK de diagnóstico usa esse mesmo monitor.
 
-### Monitor Android (`runtime`)
+### GameModeController (implementado; integração de produção pendente)
 
-O módulo Android `runtime` contém `GamepadMonitor`, responsável por:
-- enumerar os dispositivos já conectados ao iniciar;
-- registrar `InputDeviceListener` no `InputManager`;
-- reenumerar o conjunto completo após adição, remoção ou alteração;
-- classificar cada snapshot com o classificador do núcleo;
-- entregar a lista atualizada ao componente proprietário.
+O `GameModeController` é o adaptador Android: coordena `GamepadMonitor`, observa `SCREEN_ON`, `SCREEN_OFF` e `USER_PRESENT`, consulta `PowerManager.isInteractive` e `KeyguardManager.isDeviceLocked`. O novo `GameModeCoordinator` no módulo `core` concentra transições, callbacks assíncronos e temporizador através de interfaces injetáveis de scheduler e efeitos, permitindo testes determinísticos sem Android.
 
-O monitor é reutilizável e não contém política de inicialização de frontend, navegação HOME ou serviço persistente. O APK de diagnóstico usa esse mesmo monitor, evitando manter uma segunda implementação da detecção.
+As operações de frontend e HOME são injetadas por `GameModeActionHandler`. O controlador não inicia Activities diretamente: isso mantém a política de execução separada e permite validar as restrições de background activity launch do Android 17 antes de fornecer um executor privilegiado.
 
-`start()` e `stop()` devem ser chamados no thread principal e pareados com o ciclo de vida do proprietário. No produto final, o proprietário será o serviço integrado à ROM.
+O período padrão de tolerância é 3 segundos e pode ser configurado na construção. `stop()` cancela o temporizador, interrompe o monitor e reinicializa a máquina de estados. A inicialização é transacional: se qualquer etapa falhar depois do registro do receiver, os componentes parcialmente iniciados são encerrados e o receiver é removido antes de propagar a falha. Cada ciclo de vida recebe uma geração; callbacks antigos são descartados. Cada agendamento de saída também recebe uma geração própria, impedindo que um callback de temporizador já cancelado afete uma tolerância posterior. O executor de frontend deve ser idempotente e reutilizar a instância/tarefa existente quando apropriado, pois uma reinicialização do proprietário não deve criar janelas duplicadas. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
 
-### Serviço e controlador de produção (futuros)
+### Serviço persistente e executores (futuros)
 
-O serviço persistente ainda não foi criado. Ele deverá:
-- possuir o monitor durante a vida do serviço;
-- receber o estado de tela interativa e bloqueio;
-- serializar os eventos e temporizadores;
-- executar as ações da máquina de estados;
-- reconstruir o estado após boot enumerando controles já conectados.
+O serviço integrado à ROM será o proprietário do monitor e do controlador durante sua vida útil. Deverá reconstruir o estado após boot enumerando controles já conectados.
 
 O executor de frontend resolverá o pacote/atividade configurados, sem depender do Argosy. A navegação de saída usará a resolução da atividade HOME padrão, sem fixar o pacote Lawnchair.
 
@@ -70,22 +60,20 @@ A auditoria inicial identificou `system_ext` disponível, mas ainda não decidiu
 1. Documentação e auditoria inicial do device tree.
 2. Núcleo independente e testes unitários.
 3. APK de diagnóstico e validação física do controle — concluídos.
-4. Monitor Android reutilizável — em implementação nesta etapa.
-5. Serviço persistente, executor de frontend e integração privilegiada — pendentes.
-6. Build de ROM de teste, validação e instruções de recuperação.
+4. Monitor Android reutilizável — concluído e integrado.
+5. Coordenador independente testável e adaptador Android — implementados nesta etapa; CI em validação após correções de ciclo de vida.
+6. Serviço persistente, executores seguros e integração privilegiada — pendentes.
+7. Build de ROM de teste, validação e instruções de recuperação.
 
 Nenhuma fase implica flash automático no aparelho.
 
-### Restrições específicas do Android 17
+### Referências Android 17
 
-Um APK comum não tem garantia de poder iniciar uma Activity a partir do background. A permissão `android.permission.START_ACTIVITIES_FROM_BACKGROUND` é protegida pela plataforma (`@SystemApi`/oculta) e não deve ser solicitada como permissão comum de runtime. A estratégia de execução do frontend precisa ser validada para o nível de privilégio e o contexto reais do serviço.
-
-Referências:
 - [Android 17 behavior changes](https://developer.android.com/about/versions/17/behavior-changes-17)
 - [Background activity starts](https://developer.android.com/guide/components/activities/background-starts)
 - [Android 17 framework manifest](https://android.googlesource.com/platform/frameworks/base/+/android17-release/core/res/AndroidManifest.xml)
 
-### Requisitos de ciclo de vida e falhas
+## Requisitos de ciclo de vida e falhas
 
 - Com a tela apagada, aguardar até que o dispositivo fique interativo.
 - Com a tela bloqueada, não iniciar nem sobrepor o frontend à tela de bloqueio.

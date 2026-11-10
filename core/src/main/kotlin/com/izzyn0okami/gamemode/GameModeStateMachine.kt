@@ -19,6 +19,14 @@ class GameModeStateMachine {
     private var interactive = false
     private var unlocked = false
 
+    /** Clears all observed platform state when the owning controller is stopped. */
+    fun reset() {
+        state = GameModeState.IDLE
+        eligibleControllerCount = 0
+        interactive = false
+        unlocked = false
+    }
+
     fun onControllersChanged(count: Int): List<GameModeAction> {
         require(count >= 0) { "Controller count cannot be negative" }
         eligibleControllerCount = count
@@ -41,11 +49,20 @@ class GameModeStateMachine {
         }
     }
 
-    fun onDisplayAndLockStateChanged(isInteractive: Boolean, isUnlocked: Boolean): List<GameModeAction> {
+    fun onDisplayAndLockStateChanged(
+        isInteractive: Boolean,
+        isUnlocked: Boolean,
+    ): List<GameModeAction> {
         interactive = isInteractive
         unlocked = isUnlocked
-        return if (eligibleControllerCount > 0 &&
-            state == GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED) tryEnter() else emptyList()
+        return when {
+            eligibleControllerCount > 0 &&
+                state == GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED -> tryEnter()
+            eligibleControllerCount == 0 &&
+                state == GameModeState.EXIT_PENDING &&
+                interactive && unlocked -> beginExit()
+            else -> emptyList()
+        }
     }
 
     fun onFrontendLaunchResult(success: Boolean): List<GameModeAction> {
@@ -64,15 +81,22 @@ class GameModeStateMachine {
     }
 
     fun onExitGracePeriodElapsed(): List<GameModeAction> {
-        if (state != GameModeState.EXIT_PENDING || eligibleControllerCount > 0) return emptyList()
-        state = GameModeState.EXITING
-        return listOf(GameModeAction.ReturnToHome)
+        if (state != GameModeState.EXIT_PENDING || eligibleControllerCount > 0) {
+            return emptyList()
+        }
+        // Never launch HOME while the display is off or the keyguard is showing.
+        return if (interactive && unlocked) beginExit() else emptyList()
     }
 
     fun onReturnedToHome(): List<GameModeAction> {
         if (state != GameModeState.EXITING) return emptyList()
         state = GameModeState.IDLE
         return if (eligibleControllerCount > 0) tryEnter() else emptyList()
+    }
+
+    private fun beginExit(): List<GameModeAction> {
+        state = GameModeState.EXITING
+        return listOf(GameModeAction.ReturnToHome)
     }
 
     private fun tryEnter(): List<GameModeAction> {

@@ -28,6 +28,22 @@ jobs:
           gradle-version: "9.6.0"
       - name: Run core tests and build diagnostic APK
         run: gradle --no-daemon :core:test :app:assembleDebug
+      - name: Run Android runtime integration tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # ATD images are trimmed for automated tests and boot faster than full Google APIs images.
+          # API 33 is sufficient for the runtime test and supports the receiver flags API used by the test.
+          api-level: 33
+          target: aosp_atd
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 2048M
+          heap-size: 512M
+          disable-animations: true
+          disable-linux-hw-accel: true
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: gradle --no-daemon :runtime:connectedDebugAndroidTest
       - name: Upload diagnostic APK
         uses: actions/upload-artifact@v4
         with:
