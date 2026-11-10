@@ -27,6 +27,7 @@ class GameModeCoordinator(
     private val stateMachine = GameModeStateMachine()
     private var started = false
     private var generation = 0L
+    private var exitScheduleGeneration = 0L
     private var exitCancellation: GameModeCancellation? = null
 
     init {
@@ -78,10 +79,13 @@ class GameModeCoordinator(
                 GameModeAction.ScheduleExitGracePeriod -> {
                     cancelExit()
                     val callbackGeneration = generation
+                    val callbackScheduleGeneration = exitScheduleGeneration
                     exitCancellation = scheduler.postDelayed(exitGracePeriodMs) {
-                        exitCancellation = null
-                        if (isCurrent(callbackGeneration)) {
-                            dispatch(stateMachine.onExitGracePeriodElapsed())
+                        if (callbackScheduleGeneration == exitScheduleGeneration) {
+                            exitCancellation = null
+                            if (isCurrent(callbackGeneration)) {
+                                dispatch(stateMachine.onExitGracePeriodElapsed())
+                            }
                         }
                     }
                 }
@@ -111,6 +115,7 @@ class GameModeCoordinator(
         started && callbackGeneration == generation
 
     private fun cancelExit() {
+        exitScheduleGeneration += 1
         exitCancellation?.cancel()
         exitCancellation = null
     }
