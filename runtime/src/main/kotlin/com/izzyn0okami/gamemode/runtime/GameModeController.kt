@@ -31,6 +31,7 @@ class GameModeController(
     private val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
     private val keyguardManager = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     private var started = false
+    private var lifecycleGeneration = 0L
     private var exitTask: Runnable? = null
 
     private val gamepadMonitor = GamepadMonitor(appContext) { devices ->
@@ -50,6 +51,7 @@ class GameModeController(
     fun start() {
         checkMainThread()
         if (started) return
+        lifecycleGeneration += 1
         started = true
 
         val filter = IntentFilter().apply {
@@ -72,8 +74,10 @@ class GameModeController(
         checkMainThread()
         if (!started) return
         started = false
+        lifecycleGeneration += 1
         cancelExitTask()
         gamepadMonitor.stop()
+        stateMachine.reset()
         appContext.unregisterReceiver(displayReceiver)
     }
 
@@ -93,10 +97,11 @@ class GameModeController(
         actions.forEach { action ->
             when (action) {
                 GameModeAction.LaunchFrontend -> {
+                    val generation = lifecycleGeneration
                     try {
                         actionHandler.launchFrontend { success ->
                             mainHandler.post {
-                                if (started) {
+                                if (started && generation == lifecycleGeneration) {
                                     dispatch(stateMachine.onFrontendLaunchResult(success))
                                 }
                             }
@@ -108,9 +113,10 @@ class GameModeController(
 
                 GameModeAction.ScheduleExitGracePeriod -> {
                     cancelExitTask()
+                    val generation = lifecycleGeneration
                     val task = Runnable {
                         exitTask = null
-                        if (started) dispatch(stateMachine.onExitGracePeriodElapsed())
+                        if (started && generation == lifecycleGeneration) dispatch(stateMachine.onExitGracePeriodElapsed())
                     }
                     exitTask = task
                     mainHandler.postDelayed(task, exitGracePeriodMs)
