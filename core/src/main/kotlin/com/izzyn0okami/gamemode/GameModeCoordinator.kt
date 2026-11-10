@@ -12,6 +12,18 @@ interface GameModeScheduler {
 interface GameModeEffects {
     fun launchFrontend(onResult: (success: Boolean) -> Unit)
     fun returnHome(onComplete: () -> Unit)
+
+    /**
+     * Asks the user whether to leave game mode after the last controller disconnected.
+     * The prompt has no timeout. An implementation that tries and fails to present it must
+     * answer [ExitPromptResult.STAY]. The default has no prompt UI and keeps the previous
+     * behavior of returning to HOME right away.
+     */
+    fun showExitPrompt(onResult: (ExitPromptResult) -> Unit) {
+        onResult(ExitPromptResult.RETURN_HOME)
+    }
+
+    fun dismissExitPrompt() {}
 }
 
 /**
@@ -28,6 +40,7 @@ class GameModeCoordinator(
     private var started = false
     private var generation = 0L
     private var exitScheduleGeneration = 0L
+    private var promptGeneration = 0L
     private var exitCancellation: GameModeCancellation? = null
 
     init {
@@ -45,7 +58,9 @@ class GameModeCoordinator(
         started = false
         generation += 1
         cancelExit()
+        val promptWasShowing = stateMachine.state == GameModeState.AWAITING_EXIT_CONFIRMATION
         stateMachine.reset()
+        if (promptWasShowing) dismissExitPrompt()
     }
 
     fun onControllersChanged(count: Int) {
@@ -92,6 +107,28 @@ class GameModeCoordinator(
 
                 GameModeAction.CancelExitGracePeriod -> cancelExit()
 
+                GameModeAction.ShowExitPrompt -> {
+                    promptGeneration += 1
+                    val callbackGeneration = generation
+                    val callbackPromptGeneration = promptGeneration
+                    try {
+                        effects.showExitPrompt { result ->
+                            scheduler.post {
+                                if (isCurrent(callbackGeneration) &&
+                                    callbackPromptGeneration == promptGeneration
+                                ) {
+                                    dispatch(stateMachine.onExitPromptAnswered(result))
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // A prompt that cannot be shown must never end the session on its own.
+                        dispatch(stateMachine.onExitPromptAnswered(ExitPromptResult.STAY))
+                    }
+                }
+
+                GameModeAction.DismissExitPrompt -> dismissExitPrompt()
+
                 GameModeAction.ReturnToHome -> {
                     val callbackGeneration = generation
                     try {
@@ -113,6 +150,15 @@ class GameModeCoordinator(
 
     private fun isCurrent(callbackGeneration: Long) =
         started && callbackGeneration == generation
+
+    private fun dismissExitPrompt() {
+        promptGeneration += 1
+        try {
+            effects.dismissExitPrompt()
+        } catch (_: Exception) {
+            // Nothing to recover: the prompt owner is responsible for its own teardown.
+        }
+    }
 
     private fun cancelExit() {
         exitScheduleGeneration += 1

@@ -1,15 +1,27 @@
 package com.izzyn0okami.gamemode
 
 enum class GameModeState {
-    IDLE, WAITING_FOR_INTERACTIVE_UNLOCKED, ENTERING, ACTIVE, EXIT_PENDING, EXITING
+    IDLE,
+    WAITING_FOR_INTERACTIVE_UNLOCKED,
+    ENTERING,
+    ACTIVE,
+    EXIT_PENDING,
+    AWAITING_EXIT_CONFIRMATION,
+    EXIT_DECLINED,
+    EXITING,
 }
 
 sealed interface GameModeAction {
     data object LaunchFrontend : GameModeAction
     data object ScheduleExitGracePeriod : GameModeAction
     data object CancelExitGracePeriod : GameModeAction
+    data object ShowExitPrompt : GameModeAction
+    data object DismissExitPrompt : GameModeAction
     data object ReturnToHome : GameModeAction
 }
+
+/** The user's answer to the prompt shown after the last controller disconnects. */
+enum class ExitPromptResult { STAY, RETURN_HOME }
 
 /** Platform-independent transitions; Android services and timers stay outside this class. */
 class GameModeStateMachine {
@@ -39,6 +51,14 @@ class GameModeStateMachine {
                 state = GameModeState.ACTIVE
                 listOf(GameModeAction.CancelExitGracePeriod)
             }
+            count > 0 && state == GameModeState.AWAITING_EXIT_CONFIRMATION -> {
+                state = GameModeState.ACTIVE
+                listOf(GameModeAction.DismissExitPrompt)
+            }
+            count > 0 && state == GameModeState.EXIT_DECLINED -> {
+                state = GameModeState.ACTIVE
+                emptyList()
+            }
             count == 0 && state == GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED -> {
                 state = GameModeState.IDLE
                 emptyList()
@@ -64,7 +84,13 @@ class GameModeStateMachine {
             eligibleControllerCount == 0 &&
                 state == GameModeState.EXIT_PENDING &&
                 exitGraceElapsed &&
-                interactive && unlocked -> beginExit()
+                interactive && unlocked -> promptForExit()
+            state == GameModeState.AWAITING_EXIT_CONFIRMATION &&
+                !(interactive && unlocked) -> {
+                // The prompt never stays over a locked or sleeping display; ask again later.
+                state = GameModeState.EXIT_PENDING
+                listOf(GameModeAction.DismissExitPrompt)
+            }
             else -> emptyList()
         }
     }
@@ -90,14 +116,34 @@ class GameModeStateMachine {
             return emptyList()
         }
         exitGraceElapsed = true
-        // Never launch HOME while the display is off or the keyguard is showing.
-        return if (interactive && unlocked) beginExit() else emptyList()
+        // Never show UI while the display is off or the keyguard is showing.
+        return if (interactive && unlocked) promptForExit() else emptyList()
+    }
+
+    /**
+     * Answers the exit prompt. Answers that arrive when no prompt is pending are ignored.
+     * An implementation that cannot present the prompt must answer [ExitPromptResult.STAY].
+     */
+    fun onExitPromptAnswered(result: ExitPromptResult): List<GameModeAction> {
+        if (state != GameModeState.AWAITING_EXIT_CONFIRMATION) return emptyList()
+        return when (result) {
+            ExitPromptResult.RETURN_HOME -> beginExit()
+            ExitPromptResult.STAY -> {
+                state = GameModeState.EXIT_DECLINED
+                emptyList()
+            }
+        }
     }
 
     fun onReturnedToHome(): List<GameModeAction> {
         if (state != GameModeState.EXITING) return emptyList()
         state = GameModeState.IDLE
         return if (eligibleControllerCount > 0) tryEnter() else emptyList()
+    }
+
+    private fun promptForExit(): List<GameModeAction> {
+        state = GameModeState.AWAITING_EXIT_CONFIRMATION
+        return listOf(GameModeAction.ShowExitPrompt)
     }
 
     private fun beginExit(): List<GameModeAction> {

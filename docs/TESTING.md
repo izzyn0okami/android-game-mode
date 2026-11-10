@@ -9,7 +9,13 @@
 - Remover o último controle inicia a tolerância.
 - Reconectar durante a tolerância cancela a saída.
 - Reconectar depois de iniciada a navegação HOME solicita nova entrada após a conclusão da navegação.
-- Expiração da tolerância sem controles solicita retorno ao HOME.
+- Expiração da tolerância sem controles solicita o diálogo de saída, e não o retorno direto ao HOME.
+- Confirmar a saída solicita o retorno ao HOME; recusar mantém a sessão (`EXIT_DECLINED`) sem repetir o diálogo.
+- Reconectar após recusar volta a `ACTIVE`, e uma nova desconexão pergunta de novo.
+- Reconectar com o diálogo aberto o dispensa.
+- Tela apagada ou bloqueada com o diálogo aberto o dispensa e volta a perguntar ao desbloquear, sem nova tolerância.
+- Respostas sem diálogo pendente são ignoradas.
+- Evento de tela durante a tolerância não antecipa a saída.
 - Eventos repetidos não causam transições duplicadas.
 
 ## Testes unitários do classificador
@@ -85,5 +91,12 @@ A suíte usa um scheduler de relógio falso e efeitos injetados; não depende de
 - Callback de temporizador cancelado não pode expirar uma tolerância posterior.
 - Callbacks de lançamento e HOME de um ciclo anterior são ignorados após parar e reiniciar.
 - Falha no lançamento permite uma nova tentativa sem deixar a máquina presa em `ENTERING`.
+- A expiração da tolerância mostra o diálogo e só solicita HOME depois da resposta, sem tempo limite.
+- Recusar o diálogo não solicita HOME e não repete o diálogo.
+- Reconexão e `stop()` dispensam o diálogo visível, e respostas tardias são ignoradas.
+- A resposta de um diálogo anterior não responde a um diálogo mais novo.
+- Exceção ao mostrar o diálogo equivale a permanecer no modo jogo.
+- Bloquear a tela dispensa o diálogo e ele volta ao desbloquear.
+- Efeitos sem interface de diálogo mantêm o retorno imediato à HOME.
 
 A inicialização parcial do `GameModeController` deve remover o receiver e interromper monitor/coordenador quando uma etapa falhar. Foi adicionado um teste instrumentado em emulador para validar `start()`/`stop()` idempotentes, remoção do receiver, reinicialização do controlador e ausência de chamadas de frontend/HOME sem controles. O teste não substitui validação física de controles nem cobre BAL/SELinux. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.

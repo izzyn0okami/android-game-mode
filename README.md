@@ -7,7 +7,7 @@ Projeto para integrar ao LineageOS um modo de jogo que alterna entre o launcher 
 - Preservar o Lawnchair como launcher HOME padrão.
 - Detectar controles de jogo USB e Bluetooth.
 - Iniciar um frontend configurável (Argosy é uma opção, não uma dependência) quando um controle for conectado.
-- Retornar ao launcher HOME padrão quando todos os controles forem desconectados.
+- Retornar ao launcher HOME padrão quando todos os controles forem desconectados e o usuário confirmar a saída em um diálogo.
 - Evitar automações de terceiros e modificações no frontend.
 
 ## Plataforma-alvo
@@ -34,7 +34,7 @@ O APK de diagnóstico não inicia frontend em background, não substitui o launc
 1. Não substituir nem modificar o launcher padrão.
 2. Não iniciar interfaces sobre a tela bloqueada.
 3. Não abrir instâncias duplicadas do frontend.
-4. Só sair do modo jogo quando não houver nenhum controle elegível conectado.
+4. Só sair do modo jogo quando não houver nenhum controle elegível conectado e o usuário confirmar.
 5. Aplicar tolerância a desconexões transitórias.
 6. Manter o serviço independente do Argosy; qualquer frontend compatível poderá ser configurado.
 
