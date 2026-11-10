@@ -25,6 +25,10 @@
 
 No Motorola Edge 30 Fusion com LineageOS 24.0, o usuário confirmou que o APK reconhece corretamente o controle ao conectá-lo e desconectá-lo.
 
+## Teste físico do monitor Android reutilizável — aprovado
+
+O usuário instalou e testou o novo APK construído a partir da implementação `runtime` da PR #3 e informou que todos os testes executados foram aprovados no Motorola Edge 30 Fusion com LineageOS 24.0.
+
 A API `isExternal` não identifica o transporte exato: o diagnóstico apenas confirma se o Android classifica o dispositivo como externo. Não interpretar esse campo isoladamente como prova de USB ou Bluetooth.
 
 ## Testes do monitor Android
