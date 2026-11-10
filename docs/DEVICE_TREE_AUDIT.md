@@ -46,3 +46,26 @@ O caminho de integração deve ser um overlay/manifesto de produto mantido neste
 2. Conferir se há uma via suportada para iniciar o frontend sem conceder privilégios excessivos.
 3. Construir primeiro a lógica independente e os testes unitários.
 4. Só então criar o fragmento de integração de produto e compilar uma imagem de teste.
+
+## Auditoria complementar: instalação e SELinux (2026-11-10)
+
+Foram reexaminados os arquivos da branch `lineage-24.0`:
+
+- `device/motorola/tundra/device.mk` continua sendo o ponto de inclusão específico do produto: herda `sm7325-common/common.mk` e já utiliza `PRODUCT_PACKAGES` e `PRODUCT_COPY_FILES`.
+- `device/motorola/tundra/BoardConfig.mk` herda `sm7325-common/BoardConfigCommon.mk` e adiciona propriedades de `system_ext`; não define uma política SELinux específica do dispositivo.
+- `sm7325-common/BoardConfigCommon.mk` declara `system_ext` em `AB_OTA_PARTITIONS`, no grupo dinâmico `mot_dp_group` e em `TARGET_COPY_OUT_SYSTEM_EXT := system_ext`. A imagem de `system_ext` usa ext4.
+- O mesmo arquivo define `BOARD_VENDOR_SEPOLICY_DIRS += $(COMMON_PATH)/sepolicy/vendor`. A árvore comum consultada contém essa política vendor; não foi encontrada, nesses arquivos de produto, uma declaração equivalente de diretório SELinux para `system_ext`.
+- A listagem da raiz de `android_device_motorola_tundra` não apresenta diretório `sepolicy` específico do aparelho. Isso não exclui políticas herdadas de outros repositórios da build.
+- O `Android.bp` comum declara namespace Soong; a instalação deve continuar usando o mecanismo de módulos do build Android, não cópia manual de APK.
+
+### Consequências para o Game Mode
+
+1. `system_ext` é tecnicamente uma partição disponível no produto e no grupo dinâmico; isso torna possível avaliar um módulo de aplicativo privilegiado nela, mas não aprova automaticamente essa escolha.
+2. Se o APK for instalado em `system_ext/priv-app`, sua allowlist de permissões privilegiadas deverá ser instalada na mesma partição, no diretório de permissões apropriado, e validada pelo build.
+3. A árvore de dispositivo consultada não fornece evidência de que seja necessário criar uma regra SELinux nova para um aplicativo que use apenas APIs Android públicas. A necessidade real só poderá ser decidida após escolher o domínio do processo e observar a política efetiva/denials na imagem de teste.
+4. Não adicionar serviço ao `init*.rc` do aparelho apenas para iniciar uma Activity. O mecanismo de inicialização e persistência do processo Android ainda precisa ser projetado e testado separadamente.
+5. O modelo de persistência (aplicativo persistente, receiver de boot/serviço ou componente nativo) continua em aberto; não assumir que a permissão BAL, isoladamente, mantém o processo vivo.
+
+### Conclusão atualizada
+
+A partição `system_ext` é uma candidata plausível para o pacote e sua allowlist, e `device/motorola/tundra/device.mk` é o ponto de integração específico caso essa escolha seja aprovada. Ainda não há decisão final de instalação, não há alteração nos repositórios oficiais LineageOS e não há patch de SELinux ou init. Antes de implementar, falta fechar o modelo de persistência, conferir o fluxo de permissões privilegiadas do produto LineageOS e validar o domínio SELinux na imagem completa.
