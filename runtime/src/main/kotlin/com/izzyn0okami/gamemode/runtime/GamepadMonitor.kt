@@ -27,8 +27,8 @@ class GamepadMonitor(
 
     fun start() {
         if (started) return
-        started = true
         inputManager.registerInputDeviceListener(this, mainHandler)
+        started = true
         refreshDevices()
     }
 
