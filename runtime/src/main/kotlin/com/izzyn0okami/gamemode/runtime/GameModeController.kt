@@ -1,41 +1,66 @@
 package com.izzyn0okami.gamemode.runtime
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.app.KeyguardManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
-import com.izzyn0okami.gamemode.GameModeAction
-import com.izzyn0okami.gamemode.GameModeStateMachine
+import com.izzyn0okami.gamemode.GameModeCancellation
+import com.izzyn0okami.gamemode.GameModeCoordinator
+import com.izzyn0okami.gamemode.GameModeEffects
+import com.izzyn0okami.gamemode.GameModeScheduler
 
 /**
- * Android-side coordinator for gamepad, display/lock state, grace-period timing,
- * and the platform-specific effects supplied by [GameModeActionHandler].
+ * Android adapter for input-device monitoring and display/lock observation.
+ * State transitions and asynchronous effect lifecycle are handled by the
+ * platform-independent [GameModeCoordinator].
  *
- * All lifecycle methods and callbacks are serialized on the main thread.
- * This class deliberately does not launch Activities itself: the ROM integration
- * must provide an executor whose background-activity-launch privileges are verified.
+ * All lifecycle methods and platform callbacks are serialized on the main thread.
+ * This class deliberately does not launch Activities itself.
  */
 class GameModeController(
     context: Context,
     private val actionHandler: GameModeActionHandler,
-    private val exitGracePeriodMs: Long = DEFAULT_EXIT_GRACE_PERIOD_MS,
+    exitGracePeriodMs: Long = GameModeCoordinator.DEFAULT_EXIT_GRACE_PERIOD_MS,
 ) {
     private val appContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val stateMachine = GameModeStateMachine()
     private val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-    private val keyguardManager = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+    private val keyguardManager =
+        appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     private var started = false
-    private var lifecycleGeneration = 0L
-    private var exitTask: Runnable? = null
+
+    private val coordinator = GameModeCoordinator(
+        scheduler = object : GameModeScheduler {
+            override fun post(task: () -> Unit) {
+                mainHandler.post(task)
+            }
+
+            override fun postDelayed(delayMs: Long, task: () -> Unit): GameModeCancellation {
+                val runnable = Runnable(task)
+                mainHandler.postDelayed(runnable, delayMs)
+                return GameModeCancellation { mainHandler.removeCallbacks(runnable) }
+            }
+        },
+        effects = object : GameModeEffects {
+            override fun launchFrontend(onResult: (success: Boolean) -> Unit) {
+                actionHandler.launchFrontend(onResult)
+            }
+
+            override fun returnHome(onComplete: () -> Unit) {
+                actionHandler.returnHome(onComplete)
+            }
+        },
+        beforeHomeCompletion = { refreshDisplayAndLockState() },
+        exitGracePeriodMs = exitGracePeriodMs,
+    )
 
     private val gamepadMonitor = GamepadMonitor(appContext) { devices ->
-        dispatch(stateMachine.onControllersChanged(devices.count { it.classification.eligible }))
+        coordinator.onControllersChanged(devices.count { it.classification.eligible })
     }
 
     private val displayReceiver = object : BroadcastReceiver() {
@@ -44,15 +69,9 @@ class GameModeController(
         }
     }
 
-    init {
-        require(exitGracePeriodMs >= 0) { "Exit grace period cannot be negative" }
-    }
-
     fun start() {
         checkMainThread()
         if (started) return
-        lifecycleGeneration += 1
-        started = true
 
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
@@ -66,6 +85,8 @@ class GameModeController(
             appContext.registerReceiver(displayReceiver, filter)
         }
 
+        started = true
+        coordinator.start()
         refreshDisplayAndLockState()
         gamepadMonitor.start()
     }
@@ -74,90 +95,24 @@ class GameModeController(
         checkMainThread()
         if (!started) return
         started = false
-        lifecycleGeneration += 1
-        cancelExitTask()
+        coordinator.stop()
         gamepadMonitor.stop()
-        stateMachine.reset()
         appContext.unregisterReceiver(displayReceiver)
     }
 
     private fun refreshDisplayAndLockState() {
         checkMainThread()
         if (!started) return
-        dispatch(
-            stateMachine.onDisplayAndLockStateChanged(
-                isInteractive = powerManager.isInteractive,
-                isUnlocked = !keyguardManager.isDeviceLocked,
-            ),
+        coordinator.onDisplayAndLockStateChanged(
+            isInteractive = powerManager.isInteractive,
+            isUnlocked = !keyguardManager.isDeviceLocked,
         )
-    }
-
-    private fun dispatch(actions: List<GameModeAction>) {
-        checkMainThread()
-        actions.forEach { action ->
-            when (action) {
-                GameModeAction.LaunchFrontend -> {
-                    val generation = lifecycleGeneration
-                    try {
-                        actionHandler.launchFrontend { success ->
-                            mainHandler.post {
-                                if (started && generation == lifecycleGeneration) {
-                                    dispatch(stateMachine.onFrontendLaunchResult(success))
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                        dispatch(stateMachine.onFrontendLaunchResult(false))
-                    }
-                }
-
-                GameModeAction.ScheduleExitGracePeriod -> {
-                    cancelExitTask()
-                    val generation = lifecycleGeneration
-                    val task = Runnable {
-                        exitTask = null
-                        if (started && generation == lifecycleGeneration) {
-                            dispatch(stateMachine.onExitGracePeriodElapsed())
-                        }
-                    }
-                    exitTask = task
-                    mainHandler.postDelayed(task, exitGracePeriodMs)
-                }
-
-                GameModeAction.CancelExitGracePeriod -> cancelExitTask()
-
-                GameModeAction.ReturnToHome -> {
-                    val generation = lifecycleGeneration
-                    try {
-                        actionHandler.returnHome {
-                            mainHandler.post {
-                                if (started && generation == lifecycleGeneration) {
-                                    refreshDisplayAndLockState()
-                                    dispatch(stateMachine.onReturnedToHome())
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                        // Stay in EXITING; do not claim that HOME navigation succeeded.
-                    }
-                }
-            }
-        }
-    }
-
-    private fun cancelExitTask() {
-        exitTask?.let(mainHandler::removeCallbacks)
-        exitTask = null
     }
 
     private fun checkMainThread() {
         check(Looper.myLooper() == Looper.getMainLooper()) {
             "GameModeController must be used from the main thread"
         }
-    }
-
-    companion object {
-        const val DEFAULT_EXIT_GRACE_PERIOD_MS = 3_000L
     }
 }
 
