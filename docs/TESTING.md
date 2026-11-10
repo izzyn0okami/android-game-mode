@@ -95,7 +95,7 @@ O APK agora instancia o `GameModeController` no ciclo de vida da tela de diagnó
 - ao conectar o primeiro controle elegível, registra a solicitação de frontend e confirma sucesso simulado ao coordenador;
 - ao desconectar o último controle elegível, respeita a tolerância padrão de 3 segundos e registra o retorno HOME simulado;
 - não inicia Activities externas, não resolve nem altera o HOME padrão e não exige permissões privilegiadas;
-- interrompe o controlador quando a tela de diagnóstico sai do primeiro plano.
+- interrompe o controlador quando a tela de diagnóstico sai do primeiro plano; por isso, esta etapa não é um teste de serviço em segundo plano ou persistência após o fechamento da tela.
 
 ### Roteiro físico
 1. Instalar o APK de diagnóstico e abrir sua tela principal.
