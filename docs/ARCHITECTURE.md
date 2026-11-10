@@ -29,7 +29,7 @@ O módulo `runtime` contém `GamepadMonitor`, que enumera dispositivos existente
 
 ### GameModeController (implementado; integração de produção pendente)
 
-O `GameModeController` coordena o monitor, a máquina de estados, o estado de tela/bloqueio e o temporizador de tolerância. Observa `SCREEN_ON`, `SCREEN_OFF` e `USER_PRESENT`, consulta `PowerManager.isInteractive` e `KeyguardManager.isDeviceLocked`, e serializa efeitos no thread principal.
+O `GameModeController` é o adaptador Android: coordena `GamepadMonitor`, observa `SCREEN_ON`, `SCREEN_OFF` e `USER_PRESENT`, consulta `PowerManager.isInteractive` e `KeyguardManager.isDeviceLocked`. O novo `GameModeCoordinator` no módulo `core` concentra transições, callbacks assíncronos e temporizador através de interfaces injetáveis de scheduler e efeitos, permitindo testes determinísticos sem Android.
 
 As operações de frontend e HOME são injetadas por `GameModeActionHandler`. O controlador não inicia Activities diretamente: isso mantém a política de execução separada e permite validar as restrições de background activity launch do Android 17 antes de fornecer um executor privilegiado.
 
@@ -61,7 +61,7 @@ A auditoria inicial identificou `system_ext` disponível, mas ainda não decidiu
 2. Núcleo independente e testes unitários.
 3. APK de diagnóstico e validação física do controle — concluídos.
 4. Monitor Android reutilizável — concluído e integrado.
-5. Coordenador Android — em implementação nesta etapa.
+5. Coordenador independente testável e adaptador Android — implementados nesta etapa; CI pendente.
 6. Serviço persistente, executores seguros e integração privilegiada — pendentes.
 7. Build de ROM de teste, validação e instruções de recuperação.
 
