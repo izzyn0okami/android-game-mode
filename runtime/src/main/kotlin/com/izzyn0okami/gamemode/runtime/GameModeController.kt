@@ -86,9 +86,18 @@ class GameModeController(
         }
 
         started = true
-        coordinator.start()
-        refreshDisplayAndLockState()
-        gamepadMonitor.start()
+        try {
+            coordinator.start()
+            refreshDisplayAndLockState()
+            gamepadMonitor.start()
+        } catch (failure: Throwable) {
+            // Roll back every partially initialized component before allowing a retry.
+            started = false
+            runCatching { gamepadMonitor.stop() }
+            runCatching { coordinator.stop() }
+            runCatching { appContext.unregisterReceiver(displayReceiver) }
+            throw failure
+        }
     }
 
     fun stop() {
