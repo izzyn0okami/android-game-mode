@@ -116,7 +116,9 @@ class GameModeController(
                     val generation = lifecycleGeneration
                     val task = Runnable {
                         exitTask = null
-                        if (started && generation == lifecycleGeneration) dispatch(stateMachine.onExitGracePeriodElapsed())
+                        if (started && generation == lifecycleGeneration) {
+                            dispatch(stateMachine.onExitGracePeriodElapsed())
+                        }
                     }
                     exitTask = task
                     mainHandler.postDelayed(task, exitGracePeriodMs)
@@ -125,10 +127,13 @@ class GameModeController(
                 GameModeAction.CancelExitGracePeriod -> cancelExitTask()
 
                 GameModeAction.ReturnToHome -> {
+                    val generation = lifecycleGeneration
                     try {
                         actionHandler.returnHome {
                             mainHandler.post {
-                                if (started) dispatch(stateMachine.onReturnedToHome())
+                                if (started && generation == lifecycleGeneration) {
+                                    dispatch(stateMachine.onReturnedToHome())
+                                }
                             }
                         }
                     } catch (_: Exception) {
