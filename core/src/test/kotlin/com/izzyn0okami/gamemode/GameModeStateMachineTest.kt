@@ -100,6 +100,24 @@ class GameModeStateMachineTest {
         assertEquals(GameModeState.IDLE, machine.state)
     }
 
+    @Test
+    fun resetClearsStateAndObservedPlatformValues() {
+        val machine = activeMachine()
+        machine.reset()
+        assertEquals(GameModeState.IDLE, machine.state)
+        assertTrue(machine.onControllersChanged(1).isEmpty())
+        assertEquals(GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED, machine.state)
+    }
+
+    @Test
+    fun resetDuringExitPendingDoesNotReturnHomeAfterRestart() {
+        val machine = activeMachine()
+        machine.onControllersChanged(0)
+        machine.reset()
+        assertTrue(machine.onExitGracePeriodElapsed().isEmpty())
+        assertEquals(GameModeState.IDLE, machine.state)
+    }
+
     private fun activeMachine(): GameModeStateMachine {
         val machine = GameModeStateMachine()
         machine.onDisplayAndLockStateChanged(true, true)
