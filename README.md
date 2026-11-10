@@ -1,12 +1,12 @@
 # Android Game Mode
 
-Serviço integrado ao LineageOS para alternar automaticamente entre o launcher habitual e uma interface de jogos quando um gamepad USB ou Bluetooth é conectado.
+Projeto para integrar ao LineageOS um modo de jogo que alterna entre o launcher habitual e uma interface de jogos quando um controle compatível é conectado.
 
-## Objetivo
+## Objetivo final
 
 - Preservar o Lawnchair como launcher HOME padrão.
 - Detectar controles de jogo USB e Bluetooth.
-- Iniciar um frontend configurável (Argosy como opção inicial) quando um controle for conectado.
+- Iniciar um frontend configurável (Argosy é uma opção, não uma dependência) quando um controle for conectado.
 - Retornar ao launcher HOME padrão quando todos os controles forem desconectados.
 - Evitar automações de terceiros e modificações no frontend.
 
@@ -14,11 +14,15 @@ Serviço integrado ao LineageOS para alternar automaticamente entre o launcher h
 
 - Dispositivo inicial: Motorola Edge 30 Fusion (`tundra`, XT2243-1).
 - ROM: LineageOS 24.0.
-- Base Android: Android 17.
+- Base Android: Android 17 (API 37).
 
-## Estado
+## Estado do projeto
 
-Projeto em fase de especificação e MVP. A integração privilegiada com a ROM ainda depende de auditoria do device tree e de testes em build próprio. Nenhuma alteração será aplicada ao aparelho sem validação e instruções de recuperação.
+- Núcleo independente: máquina de estados e testes unitários.
+- APK de diagnóstico: primeira implementação Android para observar dispositivos de entrada enquanto o aplicativo está aberto.
+- Integração privilegiada com a ROM: ainda não implementada; depende da auditoria do device tree, permissões, partição e SELinux.
+
+O APK de diagnóstico não inicia frontend em background, não substitui o launcher e não exige permissões especiais. Nenhuma alteração será aplicada ao aparelho sem validação e instruções de recuperação.
 
 ## Documentação
 
@@ -30,7 +34,7 @@ Projeto em fase de especificação e MVP. A integração privilegiada com a ROM 
 1. Não substituir nem modificar o launcher padrão.
 2. Não iniciar interfaces sobre a tela bloqueada.
 3. Não abrir instâncias duplicadas do frontend.
-4. Só sair do modo jogo quando não houver nenhum gamepad elegível conectado.
+4. Só sair do modo jogo quando não houver nenhum controle elegível conectado.
 5. Aplicar tolerância a desconexões transitórias.
 6. Manter o serviço independente do Argosy; qualquer frontend compatível poderá ser configurado.
 
