@@ -2,9 +2,11 @@
 
 Data da consulta: 2026-11-09.
 
-Fonte examinada: [LineageOS/android_device_motorola_tundra](https://github.com/LineageOS/android_device_motorola_tundra/tree/lineage-24.0), branch `lineage-24.0`.
+Fontes examinadas:
+- [LineageOS/android_device_motorola_tundra](https://github.com/LineageOS/android_device_motorola_tundra/tree/lineage-24.0), branch `lineage-24.0`.
+- [LineageOS/android_device_motorola_sm7325-common](https://github.com/LineageOS/android_device_motorola_sm7325-common/tree/lineage-24.0), branch `lineage-24.0`.
 
-## Evidências verificadas
+## Evidências verificadas: árvore tundra
 
 - `lineage_tundra.mk` herda `device/motorola/tundra/device.mk` e define `PRODUCT_DEVICE := tundra`.
 - `device.mk` herda `device/motorola/sm7325-common/common.mk`.
@@ -13,19 +15,26 @@ Fonte examinada: [LineageOS/android_device_motorola_tundra](https://github.com/L
 - O arquivo `system_ext.prop` existe, mas contém apenas uma propriedade de display; isso confirma o uso de propriedades system_ext, não a estratégia correta para instalar este serviço.
 - `Android.bp` declara um namespace Soong e importa `hardware/motorola`.
 - `init/init.mmi.overlay.rc` contém serviços e permissões de sysfs específicos do dispositivo; não há justificativa para inserir o Game Mode nesse init RC neste estágio.
-- O produto herda componentes comuns de `sm7325-common`; portanto, a decisão final de integração depende também dessa árvore compartilhada e da configuração global da ROM.
+
+## Evidências verificadas: árvore compartilhada sm7325-common
+
+- `common.mk` ativa partições dinâmicas (`PRODUCT_USE_DYNAMIC_PARTITIONS := true`).
+- `BoardConfigCommon.mk` inclui `system_ext` na lista de partições A/B e no grupo de partições dinâmicas `mot_dp_group`.
+- A árvore compartilhada define `TARGET_COPY_OUT_SYSTEM_EXT := system_ext` e também usa `TARGET_SYSTEM_EXT_PROP`.
+- Existe um XML de exemplo para permissões privilegiadas de hotword em `configs/product_privapp-permissions-hotword.xml`. Sua presença não demonstra, por si só, que esse arquivo seja copiado para a imagem ou que seja um modelo aplicável ao nosso pacote.
+- O produto compartilhado instala diversos componentes via `PRODUCT_PACKAGES`; a integração do Game Mode deverá seguir o mecanismo de build adequado, não copiar o APK manualmente.
 
 ## Conclusão provisória
 
-Não modificar diretamente o repositório oficial LineageOS nem assumir que basta copiar um APK para `system_ext`.
+A imagem do dispositivo tem partição `system_ext` disponível, mas isso ainda não basta para decidir instalar o Game Mode nela. A escolha depende do tipo de pacote, das permissões realmente exigidas, do local da allowlist e das regras de instalação do build LineageOS.
 
-O caminho de integração deve ser um overlay/manifesto de produto mantido neste projeto, ou um patch separado e revisável para a árvore de dispositivo. Antes disso, inspecionar `sm7325-common`, regras de instalação de apps privilegiados, allowlist e SELinux na branch exata.
+Não modificar diretamente os repositórios oficiais LineageOS nem assumir que basta copiar um APK para `system_ext`.
 
-A presença de `TARGET_SYSTEM_EXT_PROP` não prova que um app privilegiado deva ser instalado em `system_ext`. O pacote e sua allowlist precisam ser instalados na partição compatível, segundo as regras do build LineageOS usado.
+O caminho de integração deve ser um overlay/manifesto de produto mantido neste projeto, ou um patch separado e revisável para a árvore de dispositivo. A integração privilegiada deve ser validada em build completo.
 
 ## Pontos ainda não confirmados
 
-- Partição final do APK.
+- Partição final do APK e da allowlist.
 - Permissões privilegiadas mínimas necessárias.
 - Necessidade real de API privilegiada para a abertura do frontend no Android 17.
 - Regras SELinux necessárias (se houver).
@@ -33,7 +42,7 @@ A presença de `TARGET_SYSTEM_EXT_PROP` não prova que um app privilegiado deva 
 
 ## Próximas verificações
 
-1. Auditar `device/motorola/sm7325-common` na branch correspondente.
-2. Examinar os makefiles e exemplos LineageOS de instalação de apps privilegiados e allowlists.
+1. Examinar a configuração global LineageOS para apps privilegiados e allowlists.
+2. Conferir se há uma via suportada para iniciar o frontend sem conceder privilégios excessivos.
 3. Construir primeiro a lógica independente e os testes unitários.
 4. Só então criar o fragmento de integração de produto e compilar uma imagem de teste.
