@@ -82,6 +82,15 @@ class GameModeStateMachineTest {
     }
 
     @Test
+    fun displayEventDuringGracePeriodDoesNotSkipTolerance() {
+        val machine = activeMachine()
+        machine.onControllersChanged(0)
+        assertTrue(machine.onDisplayAndLockStateChanged(true, true).isEmpty())
+        assertEquals(GameModeState.EXIT_PENDING, machine.state)
+        assertEquals(listOf(GameModeAction.ReturnToHome), machine.onExitGracePeriodElapsed())
+    }
+
+    @Test
     fun gracePeriodReturnsHomeOnlyWhenNoControllerRemains() {
         val machine = activeMachine()
         machine.onControllersChanged(0)

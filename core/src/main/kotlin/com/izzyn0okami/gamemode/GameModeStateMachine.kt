@@ -18,6 +18,7 @@ class GameModeStateMachine {
     private var eligibleControllerCount = 0
     private var interactive = false
     private var unlocked = false
+    private var exitGraceElapsed = false
 
     /** Clears all observed platform state when the owning controller is stopped. */
     fun reset() {
@@ -25,6 +26,7 @@ class GameModeStateMachine {
         eligibleControllerCount = 0
         interactive = false
         unlocked = false
+        exitGraceElapsed = false
     }
 
     fun onControllersChanged(count: Int): List<GameModeAction> {
@@ -43,6 +45,7 @@ class GameModeStateMachine {
             }
             count == 0 && state == GameModeState.ACTIVE -> {
                 state = GameModeState.EXIT_PENDING
+                exitGraceElapsed = false
                 listOf(GameModeAction.ScheduleExitGracePeriod)
             }
             else -> emptyList()
@@ -60,6 +63,7 @@ class GameModeStateMachine {
                 state == GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED -> tryEnter()
             eligibleControllerCount == 0 &&
                 state == GameModeState.EXIT_PENDING &&
+                exitGraceElapsed &&
                 interactive && unlocked -> beginExit()
             else -> emptyList()
         }
@@ -76,6 +80,7 @@ class GameModeStateMachine {
             emptyList()
         } else {
             state = GameModeState.EXIT_PENDING
+            exitGraceElapsed = false
             listOf(GameModeAction.ScheduleExitGracePeriod)
         }
     }
@@ -84,6 +89,7 @@ class GameModeStateMachine {
         if (state != GameModeState.EXIT_PENDING || eligibleControllerCount > 0) {
             return emptyList()
         }
+        exitGraceElapsed = true
         // Never launch HOME while the display is off or the keyguard is showing.
         return if (interactive && unlocked) beginExit() else emptyList()
     }

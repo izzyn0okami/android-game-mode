@@ -170,6 +170,22 @@ class GameModeCoordinatorTest {
         assertEquals(2, effects.launchCallbacks.size)
     }
 
+    @Test
+    fun displayEventDuringGracePeriodDoesNotRequestHomeEarly() {
+        val scheduler = FakeScheduler()
+        val effects = FakeEffects()
+        val coordinator = activeCoordinator(scheduler, effects)
+
+        coordinator.onControllersChanged(0)
+        coordinator.onDisplayAndLockStateChanged(isInteractive = true, isUnlocked = true)
+        assertEquals(0, effects.homeCallbacks.size)
+
+        scheduler.advanceBy(2_999)
+        assertEquals(0, effects.homeCallbacks.size)
+        scheduler.advanceBy(1)
+        assertEquals(1, effects.homeCallbacks.size)
+    }
+
     private fun activeCoordinator(
         scheduler: FakeScheduler,
         effects: FakeEffects,
