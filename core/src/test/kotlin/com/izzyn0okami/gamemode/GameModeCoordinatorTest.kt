@@ -87,6 +87,26 @@ class GameModeCoordinatorTest {
     }
 
     @Test
+    fun cancelledStaleTimerCannotExpireANewerGracePeriod() {
+        val scheduler = FakeScheduler()
+        val effects = FakeEffects()
+        val coordinator = activeCoordinator(scheduler, effects)
+
+        coordinator.onControllersChanged(0)
+        coordinator.onControllersChanged(1)
+        coordinator.onControllersChanged(0)
+
+        scheduler.runCancelledDelayedTasks()
+        assertEquals(0, effects.homeCallbacks.size)
+        assertEquals(1, scheduler.pendingDelayedCount)
+
+        scheduler.advanceBy(2_999)
+        assertEquals(0, effects.homeCallbacks.size)
+        scheduler.advanceBy(1)
+        assertEquals(1, effects.homeCallbacks.size)
+    }
+
+    @Test
     fun stopCancelsPendingGracePeriod() {
         val scheduler = FakeScheduler()
         val effects = FakeEffects()
@@ -166,6 +186,7 @@ class GameModeCoordinatorTest {
             val at: Long,
             val task: () -> Unit,
             var cancelled: Boolean = false,
+            var forced: Boolean = false,
         )
 
         private val queued = ArrayDeque<() -> Unit>()
@@ -193,6 +214,14 @@ class GameModeCoordinatorTest {
                     it.cancelled = true
                     queued.addLast(it.task)
                 }
+            runCurrent()
+        }
+
+        fun runCancelledDelayedTasks() {
+            delayed.filter { it.cancelled && !it.forced }.forEach {
+                it.forced = true
+                queued.addLast(it.task)
+            }
             runCurrent()
         }
 
