@@ -74,17 +74,15 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 
 ## Testes automatizados do GameModeCoordinator (core)
 
-- `start()` registra os observadores uma única vez e faz enumeração inicial dos controles.
-- `stop()` remove o listener, cancela o temporizador e reinicializa a máquina de estados.
-- Callbacks assíncronos e temporizadores de um ciclo de vida anterior são ignorados após `stop()` e um novo `start()`.
-- Mudanças de tela/bloqueio atualizam a máquina de estados.
-- Tela apagada ou bloqueada impede a solicitação de entrada até que o aparelho esteja interativo e desbloqueado.
-- A remoção do último controle agenda a tolerância padrão de 3 segundos.
+A suíte usa um scheduler de relógio falso e efeitos injetados; não depende de Android, emulador ou espera real.
+
+- Aguarda tela interativa e desbloqueada antes de iniciar o frontend.
+- Mais de um controle não provoca lançamento duplicado.
 - Reconexão durante a tolerância cancela o retorno ao HOME.
 - A expiração da tolerância solicita HOME uma única vez.
-- Falha síncrona ou assíncrona ao iniciar frontend informa falha à máquina de estados.
-- A conclusão do retorno ao HOME é comunicada à máquina; uma reconexão durante a navegação é processada depois da conclusão, após atualizar novamente o estado de tela/bloqueio.
-- Os callbacks de efeitos são encaminhados ao thread principal.
-- O controlador não inicia Activities diretamente; um executor real só será adicionado após a auditoria de BAL e privilégios Android 17.
+- A conclusão assíncrona do HOME executa a atualização prévia do estado de tela/bloqueio.
+- `stop()` cancela a tolerância pendente.
+- Callbacks de lançamento e HOME de um ciclo anterior são ignorados após parar e reiniciar.
+- Falha no lançamento permite uma nova tentativa sem deixar a máquina presa em `ENTERING`.
 
-Os testes `GameModeCoordinatorTest` usam scheduler e efeitos falsos para validar espera por tela desbloqueada, lançamento único, cancelamento da tolerância, expiração, retorno HOME, callbacks atrasados após reinicialização e repetição após falha de lançamento. A camada Android (`GameModeController`, `BroadcastReceiver`, `Handler` e `InputManager`) ainda precisa de teste de integração em dispositivo/emulador. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
+A camada Android (`GameModeController`, `BroadcastReceiver`, `Handler` e `InputManager`) ainda precisa de teste de integração em dispositivo/emulador. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
