@@ -85,9 +85,10 @@ class MainActivity : Activity(), InputManager.InputDeviceListener {
     override fun onInputDeviceChanged(deviceId: Int) = refreshDevices()
 
     private fun refreshDevices() {
-        val snapshots = inputManager.inputDeviceIds.mapNotNull { id ->
-            inputManager.getInputDevice(id)?.toSnapshot()
-        }
+        val snapshots = inputManager.inputDeviceIds
+            .asSequence()
+            .mapNotNull { id -> inputManager.getInputDevice(id)?.toSnapshot() }
+            .toList()
         val classified = snapshots.map { it to ControllerClassifier.classify(it) }
         val eligibleCount = classified.count { (_, result) -> result.eligible }
 
