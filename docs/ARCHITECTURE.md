@@ -2,13 +2,13 @@
 
 ## Escopo inicial
 
-O primeiro alvo é o Motorola Edge 30 Fusion (`tundra`) com LineageOS 24.0 / Android 17. O projeto permanece separado do Argosy Launcher. O frontend será selecionável; Argosy é apenas uma opção, não uma dependência obrigatória.
+O primeiro alvo é o Motorola Edge 30 Fusion (`tundra`) com LineageOS 24.0 / Android 17 (API 37). O projeto permanece separado do Argosy Launcher. O frontend será selecionável; Argosy é uma opção, não uma dependência obrigatória.
 
-A primeira entrega instalável será um APK de diagnóstico para validar a detecção de controles no aparelho. Esse APK não será tratado como implementação final de inicialização automática em background: a integração de produção depende do componente privilegiado na ROM.
+A primeira entrega Android é um APK de diagnóstico para validar a enumeração e os eventos de controles no aparelho. Ele observa dispositivos somente enquanto a tela do aplicativo está ativa. Não inicia frontend, não substitui o launcher e não é a implementação final de inicialização automática em background.
 
 ## Componentes
 
-### GameModeService
+### GameModeService (futuro)
 
 Serviço persistente iniciado pelo sistema. Mantém o observador de dispositivos de entrada ativo e coordena as transições. A estratégia exata de inicialização e o local de empacotamento serão definidos após a auditoria do produto LineageOS.
 
@@ -16,18 +16,29 @@ Serviço persistente iniciado pelo sistema. Mantém o observador de dispositivos
 
 Usa `InputManager` e `InputDeviceListener` para observar adição, remoção e alteração de dispositivos. Na inicialização, enumera os IDs com `getInputDeviceIds()`, consulta cada dispositivo com `getInputDevice(id)` e registra o listener com `registerInputDeviceListener()`.
 
-Critérios para um controle físico elegível:
+O classificador independente do Android aceita um dispositivo quando:
 - `supportsSource(SOURCE_GAMEPAD)` ou `supportsSource(SOURCE_JOYSTICK)`;
-- `isExternal == true`, para limitar a USB/Bluetooth e outros barramentos periféricos;
-- `isVirtual == false`;
-- não considerar teclado ou mouse isoladamente como controle;
-- reavaliar o conjunto completo após cada evento, em vez de confiar apenas no último evento recebido.
+- `isExternal == true`, indicando conexão USB, Bluetooth ou outro barramento periférico;
+- `isVirtual == false`.
 
-As fontes GAMEPAD e JOYSTICK podem coexistir no mesmo dispositivo. USB e Bluetooth são tratados pelo mesmo caminho, sem inferir a conexão pelo nome do dispositivo.
+Teclado ou mouse sem fontes GAMEPAD/JOYSTICK são ignorados. Fontes combinadas não desqualificam um controle. O monitor reavalia o conjunto completo após cada evento, em vez de confiar apenas no último evento recebido.
+
+A API `isExternal` não distingue USB de Bluetooth; ela apenas identifica dispositivos conectados por USB, Bluetooth ou outro barramento periférico. O diagnóstico não deve apresentar o tipo de transporte como se tivesse sido confirmado.
 
 Referências oficiais:
 - [InputManager API](https://developer.android.com/reference/android/hardware/input/InputManager)
 - [InputDevice API](https://developer.android.com/reference/android/view/InputDevice)
+
+### APK de diagnóstico (implementado nesta fase)
+
+O módulo `app` contém uma Activity simples que:
+- enumera dispositivos existentes ao abrir;
+- registra `InputDeviceListener` enquanto está em primeiro plano;
+- atualiza a lista em adições, remoções e alterações;
+- mostra dispositivos aceitos e ignorados, motivo, fontes, IDs de fabricante/produto e indicador externo;
+- não solicita permissões de runtime nem executa ações em background.
+
+O módulo `core` contém `ControllerClassifier` e testes unitários para a classificação, sem depender de classes Android.
 
 ### GameModeController
 
@@ -46,11 +57,11 @@ Responsabilidades:
 
 A máquina não depende de APIs Android; temporizadores, listeners e operações de Activity ficam fora do módulo `core`.
 
-### FrontendLauncher
+### FrontendLauncher (futuro)
 
 Resolve o frontend configurado e o inicia apenas quando as condições de segurança permitirem. Não presume pacote ou atividade do Argosy sem confirmação da instalação. A seleção do frontend deve ser configurável.
 
-### Retorno ao launcher
+### Retorno ao launcher (futuro)
 
 Quando nenhum controle elegível permanecer conectado, o serviço solicita a navegação para a atividade HOME padrão. Não fixa o pacote Lawnchair: o usuário mantém o Lawnchair configurado como HOME padrão e o Android resolve o destino.
 
@@ -72,7 +83,8 @@ Não alterar `system_server` no MVP. Preferir componente isolado e privilegiado 
 
 ## Comportamento de ciclo de vida
 
-- Controle conectado com tela apagada: aguardar a tela ficar interativa.
+- Diagnóstico: registrar listener em `onStart`, enumerar dispositivos existentes e removê-lo em `onStop`.
+- Controle conectado com tela apagada: o serviço futuro deve aguardar a tela ficar interativa.
 - Tela bloqueada: não abrir frontend nem sobrepor a tela de bloqueio.
 - Vários controles: manter o modo ativo até a remoção do último.
 - Reconexão durante o período de tolerância: cancelar a saída.
@@ -84,7 +96,7 @@ Não alterar `system_server` no MVP. Preferir componente isolado e privilegiado 
 
 1. Documentação e auditoria do device tree.
 2. Núcleo independente com máquina de estados e testes unitários.
-3. APK de diagnóstico Android para testar enumeração e eventos de controles no Edge 30 Fusion.
+3. APK de diagnóstico Android e validação física de controles no Edge 30 Fusion.
 4. Integração de build com LineageOS, após validar partição, permissões e SELinux.
 5. Testes em dispositivo e refinamento de reconexão/retorno HOME.
 
