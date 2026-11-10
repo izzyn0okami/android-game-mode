@@ -6,6 +6,8 @@ O primeiro alvo é o Motorola Edge 30 Fusion (`tundra`) com LineageOS 24.0 / And
 
 A primeira entrega Android é um APK de diagnóstico para validar a enumeração e os eventos de controles no aparelho. Ele observa dispositivos somente enquanto a tela do aplicativo está ativa. Não inicia frontend, não substitui o launcher e não é a implementação final de inicialização automática em background.
 
+O APK de diagnóstico usa compile/target SDK 36 nesta primeira etapa, embora o dispositivo-alvo execute API 37. As APIs de entrada necessárias já existem desde versões anteriores; não é necessário ativar agora as mudanças de comportamento específicas de apps que miram API 37. A elevação do target será feita quando a integração de produção for preparada e testada.
+
 ## Componentes
 
 ### GameModeService (futuro)
