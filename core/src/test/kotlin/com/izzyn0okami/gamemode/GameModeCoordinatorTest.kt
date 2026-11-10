@@ -66,6 +66,21 @@ class GameModeCoordinatorTest {
     }
 
     @Test
+    fun homeReturnWaitsUntilDeviceIsUnlockedAfterGracePeriod() {
+        val scheduler = FakeScheduler()
+        val effects = FakeEffects()
+        val coordinator = activeCoordinator(scheduler, effects)
+
+        coordinator.onControllersChanged(0)
+        coordinator.onDisplayAndLockStateChanged(isInteractive = true, isUnlocked = false)
+        scheduler.advanceBy(3_000)
+        assertEquals(0, effects.homeCallbacks.size)
+
+        coordinator.onDisplayAndLockStateChanged(isInteractive = true, isUnlocked = true)
+        assertEquals(1, effects.homeCallbacks.size)
+    }
+
+    @Test
     fun stopIgnoresLateLaunchCallbackAfterRestart() {
         val scheduler = FakeScheduler()
         val effects = FakeEffects()
