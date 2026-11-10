@@ -67,6 +67,7 @@ class MainActivity : Activity() {
 
         controller = GameModeController(
             context = applicationContext,
+            onDevicesChanged = ::renderDevices,
             actionHandler = object : GameModeActionHandler {
                 override fun launchFrontend(onResult: (success: Boolean) -> Unit) {
                     actionView.text = "Frontend: solicitação simulada (nenhum app externo foi aberto)"
