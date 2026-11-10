@@ -33,7 +33,7 @@ O `GameModeController` é o adaptador Android: coordena `GamepadMonitor`, observ
 
 As operações de frontend e HOME são injetadas por `GameModeActionHandler`. O controlador não inicia Activities diretamente: isso mantém a política de execução separada e permite validar as restrições de background activity launch do Android 17 antes de fornecer um executor privilegiado.
 
-O período padrão de tolerância é 3 segundos e pode ser configurado na construção. `stop()` cancela o temporizador, interrompe o monitor e reinicializa a máquina de estados. Cada ciclo de vida recebe uma geração; callbacks e temporizadores atrasados de ciclos anteriores são descartados. O executor de frontend deve ser idempotente e reutilizar a instância/tarefa existente quando apropriado, pois uma reinicialização do proprietário não deve criar janelas duplicadas. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
+O período padrão de tolerância é 3 segundos e pode ser configurado na construção. `stop()` cancela o temporizador, interrompe o monitor e reinicializa a máquina de estados. A inicialização é transacional: se qualquer etapa falhar depois do registro do receiver, os componentes parcialmente iniciados são encerrados e o receiver é removido antes de propagar a falha. Cada ciclo de vida recebe uma geração; callbacks antigos são descartados. Cada agendamento de saída também recebe uma geração própria, impedindo que um callback de temporizador já cancelado afete uma tolerância posterior. O executor de frontend deve ser idempotente e reutilizar a instância/tarefa existente quando apropriado, pois uma reinicialização do proprietário não deve criar janelas duplicadas. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
 
 ### Serviço persistente e executores (futuros)
 
@@ -61,7 +61,7 @@ A auditoria inicial identificou `system_ext` disponível, mas ainda não decidiu
 2. Núcleo independente e testes unitários.
 3. APK de diagnóstico e validação física do controle — concluídos.
 4. Monitor Android reutilizável — concluído e integrado.
-5. Coordenador independente testável e adaptador Android — implementados nesta etapa; CI pendente.
+5. Coordenador independente testável e adaptador Android — implementados nesta etapa; CI em validação após correções de ciclo de vida.
 6. Serviço persistente, executores seguros e integração privilegiada — pendentes.
 7. Build de ROM de teste, validação e instruções de recuperação.
 
