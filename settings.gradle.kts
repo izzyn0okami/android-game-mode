@@ -1,9 +1,16 @@
 pluginManagement {
-    repositories { gradlePluginPortal(); mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 rootProject.name = "AndroidGameMode"
-include(":core")
+include(":core", ":app")
