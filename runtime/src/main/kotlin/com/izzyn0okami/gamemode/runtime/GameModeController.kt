@@ -132,6 +132,7 @@ class GameModeController(
                         actionHandler.returnHome {
                             mainHandler.post {
                                 if (started && generation == lifecycleGeneration) {
+                                    refreshDisplayAndLockState()
                                     dispatch(stateMachine.onReturnedToHome())
                                 }
                             }
