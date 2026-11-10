@@ -37,7 +37,7 @@ class GameModeController(
     private val coordinator = GameModeCoordinator(
         scheduler = object : GameModeScheduler {
             override fun post(task: () -> Unit) {
-                mainHandler.post(task)
+                mainHandler.post(Runnable(task))
             }
 
             override fun postDelayed(delayMs: Long, task: () -> Unit): GameModeCancellation {
