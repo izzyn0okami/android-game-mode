@@ -82,7 +82,8 @@ A suíte usa um scheduler de relógio falso e efeitos injetados; não depende de
 - A expiração da tolerância solicita HOME uma única vez.
 - A conclusão assíncrona do HOME executa a atualização prévia do estado de tela/bloqueio.
 - `stop()` cancela a tolerância pendente.
+- Callback de temporizador cancelado não pode expirar uma tolerância posterior.
 - Callbacks de lançamento e HOME de um ciclo anterior são ignorados após parar e reiniciar.
 - Falha no lançamento permite uma nova tentativa sem deixar a máquina presa em `ENTERING`.
 
-A camada Android (`GameModeController`, `BroadcastReceiver`, `Handler` e `InputManager`) ainda precisa de teste de integração em dispositivo/emulador. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
+A inicialização parcial do `GameModeController` deve remover o receiver e interromper monitor/coordenador quando uma etapa falhar. A camada Android (`GameModeController`, `BroadcastReceiver`, `Handler` e `InputManager`) ainda precisa de teste de integração em dispositivo/emulador. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
