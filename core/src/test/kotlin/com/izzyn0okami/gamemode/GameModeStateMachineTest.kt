@@ -22,11 +22,10 @@ class GameModeStateMachineTest {
         machine.onControllersChanged(1)
         assertTrue(machine.onControllersChanged(0).isEmpty())
         assertEquals(GameModeState.IDLE, machine.state)
+        machine.onDisplayAndLockStateChanged(true, true)
         assertEquals(
             listOf(GameModeAction.LaunchFrontend),
-            machine.onDisplayAndLockStateChanged(true, true).let {
-                machine.onControllersChanged(1)
-            },
+            machine.onControllersChanged(1),
         )
     }
 
