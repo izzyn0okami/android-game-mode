@@ -17,6 +17,19 @@ class GameModeStateMachineTest {
     }
 
     @Test
+    fun disconnectingWhileWaitingReturnsToIdle() {
+        val machine = GameModeStateMachine()
+        machine.onControllersChanged(1)
+        assertTrue(machine.onControllersChanged(0).isEmpty())
+        assertEquals(GameModeState.IDLE, machine.state)
+        machine.onDisplayAndLockStateChanged(true, true)
+        assertEquals(
+            listOf(GameModeAction.LaunchFrontend),
+            machine.onControllersChanged(1),
+        )
+    }
+
+    @Test
     fun multipleControllersDoNotLaunchDuplicateFrontend() {
         val machine = activeMachine()
         assertTrue(machine.onControllersChanged(2).isEmpty())
@@ -50,6 +63,22 @@ class GameModeStateMachineTest {
         )
         assertEquals(GameModeState.ACTIVE, machine.state)
         assertTrue(machine.onExitGracePeriodElapsed().isEmpty())
+    }
+
+    @Test
+    fun reconnectionWhileReturningHomeReentersAfterHomeCompletes() {
+        val machine = activeMachine()
+        machine.onControllersChanged(0)
+        assertEquals(
+            listOf(GameModeAction.ReturnToHome),
+            machine.onExitGracePeriodElapsed(),
+        )
+        assertTrue(machine.onControllersChanged(1).isEmpty())
+        assertEquals(
+            listOf(GameModeAction.LaunchFrontend),
+            machine.onReturnedToHome(),
+        )
+        assertEquals(GameModeState.ENTERING, machine.state)
     }
 
     @Test
