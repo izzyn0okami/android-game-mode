@@ -1,4 +1,4 @@
-package com.izzyn0kami.gamemode
+package com.izzyn0okami.gamemode
 
 fun interface GameModeCancellation {
     fun cancel()
