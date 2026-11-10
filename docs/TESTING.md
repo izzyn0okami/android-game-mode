@@ -72,10 +72,11 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 - Falhas do frontend não comprometem o launcher ou o boot.
 
 
-## Testes do GameModeController (CI/build e integração futura)
+## Testes do GameModeController (plano de integração; ainda não automatizados)
 
 - `start()` registra os observadores uma única vez e faz enumeração inicial dos controles.
-- `stop()` remove o listener e cancela o temporizador de saída.
+- `stop()` remove o listener, cancela o temporizador e reinicializa a máquina de estados.
+- Callbacks assíncronos e temporizadores de um ciclo de vida anterior são ignorados após `stop()` e um novo `start()`.
 - Mudanças de tela/bloqueio atualizam a máquina de estados.
 - Tela apagada ou bloqueada impede a solicitação de entrada até que o aparelho esteja interativo e desbloqueado.
 - A remoção do último controle agenda a tolerância padrão de 3 segundos.
@@ -86,4 +87,4 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 - Os callbacks de efeitos são encaminhados ao thread principal.
 - O controlador não inicia Activities diretamente; um executor real só será adicionado após a auditoria de BAL e privilégios Android 17.
 
-O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
+A CI atual compila o controlador e executa os testes unitários do núcleo, incluindo a reinicialização da máquina de estados. Ela ainda não executa testes Android específicos de `GameModeController` (receiver, Handler, callbacks e temporizador); esses itens permanecem pendentes para uma etapa com ambiente de teste Android apropriado. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
