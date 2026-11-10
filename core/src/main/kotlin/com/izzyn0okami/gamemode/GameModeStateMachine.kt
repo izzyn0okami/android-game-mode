@@ -19,6 +19,14 @@ class GameModeStateMachine {
     private var interactive = false
     private var unlocked = false
 
+    /** Clears all observed platform state when the owning controller is stopped. */
+    fun reset() {
+        state = GameModeState.IDLE
+        eligibleControllerCount = 0
+        interactive = false
+        unlocked = false
+    }
+
     fun onControllersChanged(count: Int): List<GameModeAction> {
         require(count >= 0) { "Controller count cannot be negative" }
         eligibleControllerCount = count
