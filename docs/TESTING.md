@@ -87,3 +87,22 @@ A suíte usa um scheduler de relógio falso e efeitos injetados; não depende de
 - Falha no lançamento permite uma nova tentativa sem deixar a máquina presa em `ENTERING`.
 
 A inicialização parcial do `GameModeController` deve remover o receiver e interromper monitor/coordenador quando uma etapa falhar. Foi adicionado um teste instrumentado em emulador para validar `start()`/`stop()` idempotentes, remoção do receiver, reinicialização do controlador e ausência de chamadas de frontend/HOME sem controles. O teste não substitui validação física de controles nem cobre BAL/SELinux. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
+
+
+## APK de diagnóstico integrado — próxima validação física
+
+O APK agora instancia o `GameModeController` no ciclo de vida da tela de diagnóstico. O controlador usa o `GamepadMonitor` e o `GameModeCoordinator` reais. Para manter o teste seguro, o `GameModeActionHandler` do APK é um executor simulado:
+- ao conectar o primeiro controle elegível, registra a solicitação de frontend e confirma sucesso simulado ao coordenador;
+- ao desconectar o último controle elegível, respeita a tolerância padrão de 3 segundos e registra o retorno HOME simulado;
+- não inicia Activities externas, não resolve nem altera o HOME padrão e não exige permissões privilegiadas;
+- interrompe o controlador quando a tela de diagnóstico sai do primeiro plano.
+
+### Roteiro físico
+1. Instalar o APK de diagnóstico e abrir sua tela principal.
+2. Com a tela desbloqueada, conectar um controle: confirmar a contagem e o evento de solicitação simulada do frontend.
+3. Desconectar e reconectar durante os 3 segundos: confirmar que o retorno HOME simulado é cancelado.
+4. Desconectar o último controle e aguardar mais de 3 segundos: confirmar o evento de retorno HOME simulado.
+5. Repetir com dois controles: remover apenas um e confirmar que o modo permanece ativo; remover o segundo e confirmar o início da tolerância.
+6. Sair da tela e voltar: confirmar que o controlador inicia novamente sem listeners ou receivers duplicados.
+
+Este APK valida a integração física do monitor, controlador e coordenador. Ele **não** valida abertura real de frontend, navegação HOME, BAL, SELinux, serviço persistente, comportamento com tela bloqueada/apagada durante uso contínuo ou integração com a ROM.
