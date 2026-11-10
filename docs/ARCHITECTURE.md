@@ -33,7 +33,7 @@ O `GameModeController` coordena o monitor, a máquina de estados, o estado de te
 
 As operações de frontend e HOME são injetadas por `GameModeActionHandler`. O controlador não inicia Activities diretamente: isso mantém a política de execução separada e permite validar as restrições de background activity launch do Android 17 antes de fornecer um executor privilegiado.
 
-O período padrão de tolerância é 3 segundos e pode ser configurado na construção. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
+O período padrão de tolerância é 3 segundos e pode ser configurado na construção. `stop()` cancela o temporizador, interrompe o monitor e reinicializa a máquina de estados. Cada ciclo de vida recebe uma geração; callbacks e temporizadores atrasados de ciclos anteriores são descartados. O executor de frontend deve ser idempotente e reutilizar a instância/tarefa existente quando apropriado, pois uma reinicialização do proprietário não deve criar janelas duplicadas. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
 
 ### Serviço persistente e executores (futuros)
 
