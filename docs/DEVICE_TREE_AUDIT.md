@@ -69,3 +69,33 @@ Foram reexaminados os arquivos da branch `lineage-24.0`:
 ### Conclusão atualizada
 
 A partição `system_ext` é uma candidata plausível para o pacote e sua allowlist, e `device/motorola/tundra/device.mk` é o ponto de integração específico caso essa escolha seja aprovada. Ainda não há decisão final de instalação, não há alteração nos repositórios oficiais LineageOS e não há patch de SELinux ou init. Antes de implementar, falta fechar o modelo de persistência, conferir o fluxo de permissões privilegiadas do produto LineageOS e validar o domínio SELinux na imagem completa.
+
+## Verificação do allowlist e do processo persistente no framework LineageOS 24.0
+
+A inspeção foi ampliada para o framework e a política SELinux da mesma branch `lineage-24.0`:
+
+- `LineageOS/android_frameworks_base/services/core/java/com/android/server/SystemConfig.java` carrega `/system_ext/etc/sysconfig` e `/system_ext/etc/permissions` com `ALLOW_ALL`. No parser de `privapp-permissions`, separa explicitamente a allowlist de `system_ext` da allowlist de `system`, `product`, `vendor` e APEX. Portanto, o mecanismo de allowlist em `system_ext` está confirmado no framework efetivamente usado pela ROM, apesar de a página geral de documentação AOSP não enumerar essa partição na lista resumida.
+- `LineageOS/android_system_sepolicy/private/seapp_contexts` contém regra para `isPrivApp=true` com `minTargetSdkVersion=37`, atribuindo o domínio `priv_app`. Isso fornece uma regra genérica para aplicativos privilegiados; não demonstra que o Game Mode precise de regras SELinux próprias.
+- `LineageOS/android_frameworks_base/services/core/java/com/android/server/am/ActivityManagerService.java` chama `startPersistentApps()` durante a inicialização do sistema. Esse método consulta `PackageManager.getPersistentApplications()` e inicia os processos persistentes.
+- `LineageOS/android_frameworks_base/services/core/java/com/android/server/pm/ComputerEngine.java` seleciona pacotes marcados como persistentes; `ScanPackageUtils.java` limpa a flag para pacotes que não são apps do sistema.
+- A documentação do manifesto Android define `android:persistent="true"` como destinado somente a determinados aplicativos do sistema, não a aplicativos comuns.
+
+### Arquitetura candidata para persistência
+
+A hipótese preferida para a próxima etapa passa a ser um aplicativo de sistema privilegiado, instalado pelo build em `system_ext/priv-app`, com processo persistente declarado no manifesto e inicialização do controlador pela classe `Application`. Isso pode evitar criar um serviço nativo em `init.rc`, um serviço em `system_server` ou um foreground service permanente.
+
+Essa hipótese ainda não está aprovada para implementação. Antes, precisamos:
+1. validar que o build LineageOS reconhece o módulo APK como app de sistema/priv-app em `system_ext`;
+2. confirmar a concessão mínima de BAL e sua allowlist no mesmo `system_ext`;
+3. definir se o processo precisa ser `directBootAware` ou se iniciar após o primeiro desbloqueio atende ao comportamento esperado;
+4. testar boot, desbloqueio, encerramento inesperado, pressão de memória e reinicialização do processo;
+5. medir o custo de memória/bateria e confirmar que o uso de `android:persistent` é justificado.
+
+O processo persistente não deve abrir UI durante boot ou tela bloqueada. Ele apenas mantém o monitor e o coordenador ativos; o frontend continua condicionado a tela interativa e desbloqueada. Não adicionar `android:sharedUserId="android.uid.system"` nem modificar `system_server` sem necessidade demonstrada.
+
+Fontes de código consultadas:
+- [SystemConfig.java — LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/services/core/java/com/android/server/SystemConfig.java)
+- [ActivityManagerService.java — LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/services/core/java/com/android/server/am/ActivityManagerService.java)
+- [ComputerEngine.java — LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/services/core/java/com/android/server/pm/ComputerEngine.java)
+- [seapp_contexts — LineageOS 24.0](https://github.com/LineageOS/android_system_sepolicy/blob/lineage-24.0/private/seapp_contexts)
+- [Manifesto application — Android Developers](https://developer.android.com/guide/topics/manifest/application-element)
