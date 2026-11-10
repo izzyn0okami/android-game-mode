@@ -1,28 +1,21 @@
 package com.izzyn0okami.gamemode.diagnostic
 
 import android.app.Activity
-import android.content.Context
-import android.hardware.input.InputManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.InputDevice
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.izzyn0okami.gamemode.ControllerClassifier
-import com.izzyn0okami.gamemode.InputDeviceSnapshot
+import com.izzyn0okami.gamemode.runtime.GamepadMonitor
+import com.izzyn0okami.gamemode.runtime.ObservedInputDevice
 
-class MainActivity : Activity(), InputManager.InputDeviceListener {
-    private lateinit var inputManager: InputManager
+class MainActivity : Activity() {
+    private lateinit var gamepadMonitor: GamepadMonitor
     private lateinit var summaryView: TextView
     private lateinit var devicesContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -35,7 +28,7 @@ class MainActivity : Activity(), InputManager.InputDeviceListener {
         })
 
         content.addView(TextView(this).apply {
-            text = "Este aplicativo apenas observa dispositivos de entrada enquanto está aberto. Não inicia frontend nem altera o launcher."
+            text = "Este aplicativo observa dispositivos de entrada enquanto está aberto. Não inicia frontend nem altera o launcher."
             textSize = 14f
             setPadding(0, dp(8), 0, dp(16))
         })
@@ -63,43 +56,31 @@ class MainActivity : Activity(), InputManager.InputDeviceListener {
             ),
         )
 
-        val scroll = ScrollView(this).apply { addView(content) }
-        setContentView(scroll)
+        setContentView(ScrollView(this).apply { addView(content) })
+
+        gamepadMonitor = GamepadMonitor(this, ::renderDevices)
     }
 
     override fun onStart() {
         super.onStart()
-        inputManager.registerInputDeviceListener(this, Handler(Looper.getMainLooper()))
-        refreshDevices()
+        gamepadMonitor.start()
     }
 
     override fun onStop() {
-        inputManager.unregisterInputDeviceListener(this)
+        gamepadMonitor.stop()
         super.onStop()
     }
 
-    override fun onInputDeviceAdded(deviceId: Int) = refreshDevices()
-
-    override fun onInputDeviceRemoved(deviceId: Int) = refreshDevices()
-
-    override fun onInputDeviceChanged(deviceId: Int) = refreshDevices()
-
-    private fun refreshDevices() {
-        val snapshots = inputManager.inputDeviceIds
-            .asSequence()
-            .mapNotNull { id -> inputManager.getInputDevice(id)?.toSnapshot() }
-            .toList()
-        val classified = snapshots.map { it to ControllerClassifier.classify(it) }
-        val eligibleCount = classified.count { (_, result) -> result.eligible }
-
+    private fun renderDevices(devices: List<ObservedInputDevice>) {
+        val eligibleCount = devices.count { it.classification.eligible }
         summaryView.text = when (eligibleCount) {
             0 -> "Nenhum controle elegível detectado"
             1 -> "1 controle elegível detectado"
-            else -> eligibleCount.toString() + " controles elegíveis detectados"
+            else -> "$eligibleCount controles elegíveis detectados"
         }
 
         devicesContainer.removeAllViews()
-        if (classified.isEmpty()) {
+        if (devices.isEmpty()) {
             devicesContainer.addView(TextView(this).apply {
                 text = "Nenhum dispositivo de entrada encontrado."
                 textSize = 14f
@@ -107,7 +88,9 @@ class MainActivity : Activity(), InputManager.InputDeviceListener {
             return
         }
 
-        classified.forEach { (device, result) ->
+        devices.forEach { observed ->
+            val device = observed.snapshot
+            val result = observed.classification
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -136,18 +119,6 @@ class MainActivity : Activity(), InputManager.InputDeviceListener {
             })
         }
     }
-
-    private fun InputDevice.toSnapshot() = InputDeviceSnapshot(
-        id = id,
-        name = name,
-        sources = sources,
-        supportsGamepad = supportsSource(InputDevice.SOURCE_GAMEPAD),
-        supportsJoystick = supportsSource(InputDevice.SOURCE_JOYSTICK),
-        isExternal = isExternal,
-        isVirtual = isVirtual,
-        vendorId = vendorId,
-        productId = productId,
-    )
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

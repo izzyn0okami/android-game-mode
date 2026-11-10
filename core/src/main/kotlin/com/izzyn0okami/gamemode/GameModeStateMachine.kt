@@ -29,6 +29,10 @@ class GameModeStateMachine {
                 state = GameModeState.ACTIVE
                 listOf(GameModeAction.CancelExitGracePeriod)
             }
+            count == 0 && state == GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED -> {
+                state = GameModeState.IDLE
+                emptyList()
+            }
             count == 0 && state == GameModeState.ACTIVE -> {
                 state = GameModeState.EXIT_PENDING
                 listOf(GameModeAction.ScheduleExitGracePeriod)
@@ -65,8 +69,10 @@ class GameModeStateMachine {
         return listOf(GameModeAction.ReturnToHome)
     }
 
-    fun onReturnedToHome() {
-        if (state == GameModeState.EXITING) state = GameModeState.IDLE
+    fun onReturnedToHome(): List<GameModeAction> {
+        if (state != GameModeState.EXITING) return emptyList()
+        state = GameModeState.IDLE
+        return if (eligibleControllerCount > 0) tryEnter() else emptyList()
     }
 
     private fun tryEnter(): List<GameModeAction> {

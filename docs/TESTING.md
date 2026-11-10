@@ -2,12 +2,13 @@
 
 ## Testes unitários da máquina de estados
 
-- Nenhum controle conectado mantém estado ocioso.
-- Primeiro controle elegível solicita entrada uma única vez.
-- Segundo controle não inicia outra instância.
-- Remoção de um controle não encerra o modo se outro continuar conectado.
-- Remoção do último controle inicia o período de tolerância.
-- Reconexão durante a tolerância cancela a saída.
+- Aguardar tela interativa e desbloqueada antes de solicitar entrada.
+- Desconectar enquanto aguarda desbloqueio retorna a máquina para `IDLE`.
+- Vários controles não iniciam instâncias duplicadas.
+- Remover um dentre vários não encerra o modo.
+- Remover o último controle inicia a tolerância.
+- Reconectar durante a tolerância cancela a saída.
+- Reconectar depois de iniciada a navegação HOME solicita nova entrada após a conclusão da navegação.
 - Expiração da tolerância sem controles solicita retorno ao HOME.
 - Eventos repetidos não causam transições duplicadas.
 
@@ -20,19 +21,20 @@
 - Dispositivo virtual é ignorado.
 - Fontes combinadas (gamepad + teclado) continuam elegíveis.
 
-## Testes manuais do APK de diagnóstico
+## Teste físico do APK de diagnóstico — aprovado
 
-1. Instalar e abrir o APK de diagnóstico.
-2. Sem controles conectados, confirmar a mensagem de ausência de controle elegível.
-3. Conectar um gamepad USB e confirmar atualização da lista sem reiniciar o aplicativo.
-4. Desconectar o gamepad e confirmar remoção da lista.
-5. Repetir com um controle Bluetooth já pareado.
-6. Conectar teclado e mouse e confirmar que não são classificados como controles.
-7. Conectar dois controles, remover um e confirmar que o contador permanece em um.
-8. Fechar e reabrir o aplicativo com um controle conectado; confirmar que a enumeração inicial o encontra.
-9. Registrar nome, fabricante/produto, fontes e resultado mostrado para cada acessório testado.
+No Motorola Edge 30 Fusion com LineageOS 24.0, o usuário confirmou que o APK reconhece corretamente o controle ao conectá-lo e desconectá-lo.
 
-A propriedade `isExternal` não identifica o transporte exato: o diagnóstico apenas confirma se o Android classifica o dispositivo como externo. Não interpretar esse campo isoladamente como prova de USB ou Bluetooth.
+A API `isExternal` não identifica o transporte exato: o diagnóstico apenas confirma se o Android classifica o dispositivo como externo. Não interpretar esse campo isoladamente como prova de USB ou Bluetooth.
+
+## Testes do monitor Android
+
+- Enumerar um controle já conectado ao iniciar o monitor.
+- Atualizar a lista após adição, remoção e alteração de dispositivo.
+- Reenumerar todos os dispositivos em cada evento.
+- Confirmar que teclado/mouse sem fontes GAMEPAD/JOYSTICK não contam como controles.
+- Confirmar que `stop()` remove o listener e impede novas notificações.
+- Confirmar que chamadas repetidas a `start()`/`stop()` não registram ou removem listeners duplicados.
 
 ## Testes de ciclo de vida e segurança (serviço futuro)
 
@@ -55,14 +57,6 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 - compilar imagem de teste;
 - instalar em ambiente recuperável, com backup e imagem de retorno disponíveis;
 - coletar logs do serviço e verificar ausência de crashes.
-
-## Critérios de aceite do APK de diagnóstico
-
-- APK debug compilado e disponível como artefato da CI.
-- Enumeração inicial e eventos de adição/remoção/alteração funcionais.
-- Classificador passa nos testes unitários.
-- Teclado e mouse não são classificados como controles.
-- O aplicativo não inicia frontend, não muda HOME e não exige permissões especiais.
 
 ## Critérios de aceite do sistema completo
 
