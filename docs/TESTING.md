@@ -83,7 +83,7 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 - Reconexão durante a tolerância cancela o retorno ao HOME.
 - A expiração da tolerância solicita HOME uma única vez.
 - Falha síncrona ou assíncrona ao iniciar frontend informa falha à máquina de estados.
-- A conclusão do retorno ao HOME é comunicada à máquina; uma reconexão durante a navegação é processada depois da conclusão.
+- A conclusão do retorno ao HOME é comunicada à máquina; uma reconexão durante a navegação é processada depois da conclusão, após atualizar novamente o estado de tela/bloqueio.
 - Os callbacks de efeitos são encaminhados ao thread principal.
 - O controlador não inicia Activities diretamente; um executor real só será adicionado após a auditoria de BAL e privilégios Android 17.
 
