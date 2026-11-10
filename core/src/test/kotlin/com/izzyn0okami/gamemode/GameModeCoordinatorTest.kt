@@ -66,7 +66,7 @@ class GameModeCoordinatorTest {
     }
 
     @Test
-    fun stopCancelsTimerAndIgnoresLateLaunchCallbackAfterRestart() {
+    fun stopIgnoresLateLaunchCallbackAfterRestart() {
         val scheduler = FakeScheduler()
         val effects = FakeEffects()
         val coordinator = GameModeCoordinator(scheduler, effects)
