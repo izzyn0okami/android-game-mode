@@ -114,7 +114,9 @@ class GameModeController(
         if (!started) return
         coordinator.onDisplayAndLockStateChanged(
             isInteractive = powerManager.isInteractive,
-            isUnlocked = !keyguardManager.isDeviceLocked,
+            // isDeviceLocked() alone treats a swipe-dismissible keyguard as unlocked.
+            // Require the keyguard to be gone as well before allowing any UI navigation.
+            isUnlocked = !keyguardManager.isDeviceLocked && !keyguardManager.isKeyguardLocked,
         )
     }
 
