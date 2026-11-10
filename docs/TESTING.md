@@ -70,3 +70,20 @@ Somente após auditoria da árvore `tundra` na branch `lineage-24.0`:
 - Nenhuma UI é aberta sobre a tela bloqueada.
 - Lawnchair permanece como HOME padrão.
 - Falhas do frontend não comprometem o launcher ou o boot.
+
+
+## Testes do GameModeController (CI/build e integração futura)
+
+- `start()` registra os observadores uma única vez e faz enumeração inicial dos controles.
+- `stop()` remove o listener e cancela o temporizador de saída.
+- Mudanças de tela/bloqueio atualizam a máquina de estados.
+- Tela apagada ou bloqueada impede a solicitação de entrada até que o aparelho esteja interativo e desbloqueado.
+- A remoção do último controle agenda a tolerância padrão de 3 segundos.
+- Reconexão durante a tolerância cancela o retorno ao HOME.
+- A expiração da tolerância solicita HOME uma única vez.
+- Falha síncrona ou assíncrona ao iniciar frontend informa falha à máquina de estados.
+- A conclusão do retorno ao HOME é comunicada à máquina; uma reconexão durante a navegação é processada depois da conclusão.
+- Os callbacks de efeitos são encaminhados ao thread principal.
+- O controlador não inicia Activities diretamente; um executor real só será adicionado após a auditoria de BAL e privilégios Android 17.
+
+O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
