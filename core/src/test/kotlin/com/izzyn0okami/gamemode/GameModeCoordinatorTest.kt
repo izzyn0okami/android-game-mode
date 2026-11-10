@@ -2,7 +2,6 @@ package com.izzyn0okami.gamemode
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class GameModeCoordinatorTest {
@@ -77,16 +76,29 @@ class GameModeCoordinatorTest {
         coordinator.onControllersChanged(1)
         val staleLaunch = effects.launchCallbacks.single()
 
-        coordinator.onControllersChanged(0)
         coordinator.stop()
         coordinator.start()
         staleLaunch(true)
         scheduler.runCurrent()
-        assertEquals(0, scheduler.pendingDelayedCount)
 
         coordinator.onControllersChanged(1)
         assertEquals(1, effects.launchCallbacks.size)
-        assertFalse(effects.homeCallbacks.isNotEmpty())
+        assertEquals(0, effects.homeCallbacks.size)
+    }
+
+    @Test
+    fun stopCancelsPendingGracePeriod() {
+        val scheduler = FakeScheduler()
+        val effects = FakeEffects()
+        val coordinator = activeCoordinator(scheduler, effects)
+
+        coordinator.onControllersChanged(0)
+        assertEquals(1, scheduler.pendingDelayedCount)
+        coordinator.stop()
+        assertEquals(0, scheduler.pendingDelayedCount)
+        scheduler.advanceBy(3_000)
+
+        assertEquals(0, effects.homeCallbacks.size)
     }
 
     @Test
