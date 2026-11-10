@@ -99,3 +99,23 @@ Fontes de código consultadas:
 - [ComputerEngine.java — LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/services/core/java/com/android/server/pm/ComputerEngine.java)
 - [seapp_contexts — LineageOS 24.0](https://github.com/LineageOS/android_system_sepolicy/blob/lineage-24.0/private/seapp_contexts)
 - [Manifesto application — Android Developers](https://developer.android.com/guide/topics/manifest/application-element)
+
+## Verificação final do caminho BAL no framework LineageOS 24.0
+
+A auditoria do Android 17 foi aprofundada no framework da mesma branch:
+
+- `core/res/AndroidManifest.xml` declara `android.permission.START_ACTIVITIES_FROM_BACKGROUND` como permissão `@SystemApi @hide`, com proteção `signature|privileged|vendorPrivileged|oem|verifier|role`.
+- `services/core/java/com/android/server/wm/BackgroundActivityStartController.java` contém uma exceção BAL explícita: quando `hasBalPermission(uid, pid)` confirma essa permissão, o veredito permite iniciar uma nova tarefa. O método consulta a concessão real via `ActivityTaskManagerService.checkPermission`.
+- Portanto, para um aplicativo instalado como `system_ext/priv-app`, a estratégia de solicitar essa permissão no manifesto e concedê-la por allowlist de `system_ext/etc/permissions` tem suporte direto no framework LineageOS 24.0.
+
+### Decisão técnica provisória para o executor
+
+O executor de produção poderá usar `Context.startActivity()` com `FLAG_ACTIVITY_NEW_TASK` a partir do processo privilegiado, depois de confirmar tela interativa e desbloqueada. O frontend deve ser resolvido pela atividade configurada e validado como instalado/habilitado. O retorno usará a intent HOME padrão, sem fixar o pacote Lawnchair.
+
+Não solicitar `START_ANY_ACTIVITY`: ela é uma permissão distinta, de assinatura, e não é necessária para iniciar uma atividade de launcher exportada. Não solicitar permissões de foreground service apenas para contornar BAL.
+
+Essa conclusão valida o caminho de autorização BAL; ainda não substitui teste de integração no aparelho, nem decide o modelo persistente final.
+
+Fonte de código:
+- [AndroidManifest.xml — permissão BAL, LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/core/res/AndroidManifest.xml)
+- [BackgroundActivityStartController.java — verificação BAL, LineageOS 24.0](https://github.com/LineageOS/android_frameworks_base/blob/lineage-24.0/services/core/java/com/android/server/wm/BackgroundActivityStartController.java)
