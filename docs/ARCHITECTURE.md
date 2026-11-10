@@ -75,3 +75,23 @@ A auditoria inicial identificou `system_ext` disponível, mas ainda não decidiu
 6. Build de ROM de teste, validação e instruções de recuperação.
 
 Nenhuma fase implica flash automático no aparelho.
+
+### Restrições específicas do Android 17
+
+Um APK comum não tem garantia de poder iniciar uma Activity a partir do background. A permissão `android.permission.START_ACTIVITIES_FROM_BACKGROUND` é protegida pela plataforma (`@SystemApi`/oculta) e não deve ser solicitada como permissão comum de runtime. A estratégia de execução do frontend precisa ser validada para o nível de privilégio e o contexto reais do serviço.
+
+Referências:
+- [Android 17 behavior changes](https://developer.android.com/about/versions/17/behavior-changes-17)
+- [Background activity starts](https://developer.android.com/guide/components/activities/background-starts)
+- [Android 17 framework manifest](https://android.googlesource.com/platform/frameworks/base/+/android17-release/core/res/AndroidManifest.xml)
+
+### Requisitos de ciclo de vida e falhas
+
+- Com a tela apagada, aguardar até que o dispositivo fique interativo.
+- Com a tela bloqueada, não iniciar nem sobrepor o frontend à tela de bloqueio.
+- Manter o modo ativo enquanto houver ao menos um controle elegível.
+- Reconexão durante a tolerância deve cancelar a saída.
+- Reconexão depois que a navegação HOME começou deve ser tratada após a conclusão dessa navegação.
+- Após boot, enumerar controles já conectados antes de decidir o estado.
+- Se o frontend estiver ausente ou falhar ao iniciar, manter o launcher padrão funcional e evitar ciclos de tentativas duplicadas.
+- A integração final deve validar também as restrições de inicialização de serviços em background.
