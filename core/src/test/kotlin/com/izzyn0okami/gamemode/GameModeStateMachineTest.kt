@@ -101,6 +101,17 @@ class GameModeStateMachineTest {
     }
 
     @Test
+    fun reconnectionAfterHomeWaitsIfScreenBecameLockedDuringNavigation() {
+        val machine = activeMachine()
+        machine.onControllersChanged(0)
+        machine.onExitGracePeriodElapsed()
+        machine.onControllersChanged(1)
+        assertTrue(machine.onDisplayAndLockStateChanged(true, false).isEmpty())
+        assertTrue(machine.onReturnedToHome().isEmpty())
+        assertEquals(GameModeState.WAITING_FOR_INTERACTIVE_UNLOCKED, machine.state)
+    }
+
+    @Test
     fun resetClearsStateAndObservedPlatformValues() {
         val machine = activeMachine()
         machine.reset()
