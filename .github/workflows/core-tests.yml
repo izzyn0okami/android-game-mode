@@ -1,7 +1,7 @@
 name: Android diagnostic build and core tests
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "feature/**"]
   pull_request:
     branches: [main]
 concurrency:
