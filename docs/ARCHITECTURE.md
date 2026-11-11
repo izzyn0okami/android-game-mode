@@ -52,13 +52,15 @@ As operações de frontend e HOME são injetadas por `GameModeActionHandler`. O 
 
 O período padrão de tolerância é 3 segundos e pode ser configurado na construção. `stop()` cancela o temporizador, interrompe o monitor e reinicializa a máquina de estados. A inicialização é transacional: se qualquer etapa falhar depois do registro do receiver, os componentes parcialmente iniciados são encerrados e o receiver é removido antes de propagar a falha. Cada ciclo de vida recebe uma geração; callbacks antigos são descartados. Cada agendamento de saída também recebe uma geração própria, impedindo que um callback de temporizador já cancelado afete uma tolerância posterior. O executor de frontend deve ser idempotente e reutilizar a instância/tarefa existente quando apropriado, pois uma reinicialização do proprietário não deve criar janelas duplicadas. O controlador não cria um serviço persistente e ainda não está ligado ao APK de diagnóstico nem à ROM.
 
-### Serviço persistente e executores (futuros)
+### Serviço persistente (módulo `:service`)
 
-O serviço integrado à ROM será o proprietário do monitor e do controlador durante sua vida útil. Deverá reconstruir o estado após boot enumerando controles já conectados.
+`:service` é um APK (`com.izzyn0okami.gamemode.service`) pensado para `system_ext/priv-app`. É `android:persistent="true"` e `directBootAware`; o sistema o mantém vivo e `GameModeApplication.onCreate()` cria e inicia o `GameModeController`. Não há `sharedUserId`, alteração em `system_server` nem serviço em primeiro plano. Ao iniciar, o monitor enumera os controles já conectados, então o estado é reconstruído após o boot.
 
-O executor de frontend resolverá o pacote/atividade configurados, sem depender do Argosy. A navegação de saída usará a resolução da atividade HOME padrão, sem fixar o pacote Lawnchair.
+- `SystemActionHandler`: abre o frontend (`getLaunchIntentForPackage`, pacote em `BuildConfig.FRONTEND_PACKAGE`, padrão `com.nendo.argosy`, configurável com `-PfrontendPackage=`) e volta à HOME resolvida pelo sistema (`CATEGORY_HOME`), sem fixar o Lawnchair.
+- `ExitPromptActivity`: diálogo do próprio serviço (não do frontend), pois o controle pode desconectar com um jogo em primeiro plano. Botões focalizáveis, respondíveis pelo controle.
+- `ExitPromptPresenter` (`core`, testado na JVM): liga o coordenador à janela. A resposta do usuário não tem tempo limite, mas a janela precisa aparecer em 3 s; se não aparecer (por exemplo, lançamento bloqueado), vale `STAY`.
 
-O executor do diálogo de saída deve ser uma janela do próprio serviço (por exemplo, uma Activity translúcida iniciada com a permissão BAL), e não do frontend, porque o controle pode desconectar com um jogo em primeiro plano.
+`startActivity` bloqueado por BAL não lança exceção. Por isso "sucesso" no executor significa apenas que a chamada foi aceita; a validação real depende de teste no aparelho.
 
 ## Segurança e integração com a ROM
 
@@ -81,7 +83,7 @@ A auditoria inicial identificou `system_ext` disponível, mas ainda não decidiu
 3. APK de diagnóstico e validação física do controle — concluídos.
 4. Monitor Android reutilizável — concluído e integrado.
 5. Coordenador independente testável e adaptador Android — implementados nesta etapa; CI em validação após correções de ciclo de vida.
-6. Serviço persistente, executores seguros e integração privilegiada — pendentes.
+6. Serviço persistente e executores — implementados em `:service` (compilação validada no CI; comportamento no aparelho **não** validado). Integração privilegiada na ROM — pendente.
 7. Build de ROM de teste, validação e instruções de recuperação.
 
 Nenhuma fase implica flash automático no aparelho.

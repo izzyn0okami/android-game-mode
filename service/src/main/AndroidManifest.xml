@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Privileged: only granted when the APK lives in a priv-app directory and the
+         ROM ships rom/privapp-permissions-com.izzyn0okami.gamemode.service.xml.
+         Without it the app still installs, but background launches may be blocked. -->
+    <uses-permission
+        android:name="android.permission.START_ACTIVITIES_FROM_BACKGROUND"
+        tools:ignore="ProtectedPermissions" />
+
+    <queries>
+        <package android:name="${frontendPackage}" />
+    </queries>
+
+    <application
+        android:name=".GameModeApplication"
+        android:label="@string/app_name"
+        android:persistent="true"
+        android:directBootAware="true"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".ExitPromptActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.DeviceDefault.Dialog.Alert" />
+    </application>
+</manifest>

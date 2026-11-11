@@ -27,7 +27,7 @@ jobs:
         with:
           gradle-version: "9.6.0"
       - name: Run core tests and build diagnostic APK
-        run: gradle --no-daemon :core:test :app:assembleDebug
+        run: gradle --no-daemon :core:test :app:assembleDebug :service:assembleDebug
       - name: Run Android runtime integration tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -49,5 +49,14 @@ jobs:
         with:
           name: android-game-mode-diagnostic-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload service APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-game-mode-service-debug
+          path: |
+            service/build/outputs/apk/debug/service-debug.apk
+            service/rom/privapp-permissions-com.izzyn0okami.gamemode.service.xml
           if-no-files-found: error
           retention-days: 14
