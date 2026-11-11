@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import com.izzyn0okami.gamemode.ExitPromptResult
 import com.izzyn0okami.gamemode.GameModeCancellation
 import com.izzyn0okami.gamemode.GameModeCoordinator
 import com.izzyn0okami.gamemode.GameModeEffects
@@ -53,6 +54,14 @@ class GameModeController(
 
             override fun returnHome(onComplete: () -> Unit) {
                 actionHandler.returnHome(onComplete)
+            }
+
+            override fun showExitPrompt(onResult: (ExitPromptResult) -> Unit) {
+                actionHandler.showExitPrompt(onResult)
+            }
+
+            override fun dismissExitPrompt() {
+                actionHandler.dismissExitPrompt()
             }
         },
         beforeHomeCompletion = { refreshDisplayAndLockState() },
@@ -131,4 +140,11 @@ class GameModeController(
 interface GameModeActionHandler {
     fun launchFrontend(onResult: (success: Boolean) -> Unit)
     fun returnHome(onComplete: () -> Unit)
+
+    /** Defaults to no prompt UI: returns to HOME right away, as before the prompt existed. */
+    fun showExitPrompt(onResult: (ExitPromptResult) -> Unit) {
+        onResult(ExitPromptResult.RETURN_HOME)
+    }
+
+    fun dismissExitPrompt() {}
 }

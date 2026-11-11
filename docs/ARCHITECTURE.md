@@ -14,12 +14,29 @@ A máquina de estados não depende de APIs Android. Ela serializa as decisões d
 
 Estados:
 
-`IDLE -> WAITING_FOR_INTERACTIVE_UNLOCKED -> ENTERING -> ACTIVE -> EXIT_PENDING -> EXITING`
+`IDLE -> WAITING_FOR_INTERACTIVE_UNLOCKED -> ENTERING -> ACTIVE -> EXIT_PENDING -> AWAITING_EXIT_CONFIRMATION -> EXITING`
+
+Estado auxiliar: `EXIT_DECLINED` (o usuário optou por permanecer no modo jogo sem nenhum controle conectado).
 
 Ações emitidas:
 - iniciar frontend;
 - agendar/cancelar período de tolerância;
-- solicitar retorno à atividade HOME padrão.
+- mostrar/dispensar o diálogo de confirmação de saída;
+- solicitar retorno à atividade HOME padrão (somente depois da confirmação do usuário).
+
+#### Confirmação de saída
+
+Quando o último controle elegível desconecta e a tolerância expira, a máquina não volta sozinha à HOME: emite `ShowExitPrompt` e aguarda a resposta do usuário (`ExitPromptResult.RETURN_HOME` ou `STAY`).
+
+- O diálogo não tem tempo limite; nada é encerrado sem resposta.
+- Reconectar um controle com o diálogo aberto o dispensa e volta a `ACTIVE`.
+- Tela apagada ou bloqueada dispensa o diálogo, que nunca fica sobre o keyguard. Ele é mostrado de novo quando a tela ficar interativa e desbloqueada, sem nova tolerância.
+- Responder `STAY` leva a `EXIT_DECLINED`: a sessão continua e o diálogo só reaparece depois que um controle reconectar e todos desconectarem de novo. Reconectar a partir de `EXIT_DECLINED` não reabre o frontend, para não esconder um jogo em andamento.
+- Respostas sem diálogo pendente, de diálogos já dispensados ou de ciclos de vida anteriores são ignoradas (o coordenador mantém uma geração própria para o diálogo).
+- Um executor que tenta e não consegue mostrar o diálogo deve responder `STAY`, e uma exceção em `showExitPrompt` é tratada como `STAY`. A implementação padrão, sem interface de diálogo, retorna à HOME imediatamente, como antes.
+- `RETURN_HOME` só pede a navegação à HOME. Decidir se "encerrar" também fecha o jogo em andamento fica para o executor e ainda está em aberto.
+
+Limitação conhecida: o núcleo não sabe qual app está em primeiro plano. Se o usuário sair manualmente do frontend enquanto está em `EXIT_DECLINED`, reconectar o controle não reabre o frontend.
 
 ### Classificador e monitor Android
 
@@ -40,6 +57,8 @@ O período padrão de tolerância é 3 segundos e pode ser configurado na constr
 O serviço integrado à ROM será o proprietário do monitor e do controlador durante sua vida útil. Deverá reconstruir o estado após boot enumerando controles já conectados.
 
 O executor de frontend resolverá o pacote/atividade configurados, sem depender do Argosy. A navegação de saída usará a resolução da atividade HOME padrão, sem fixar o pacote Lawnchair.
+
+O executor do diálogo de saída deve ser uma janela do próprio serviço (por exemplo, uma Activity translúcida iniciada com a permissão BAL), e não do frontend, porque o controle pode desconectar com um jogo em primeiro plano.
 
 ## Segurança e integração com a ROM
 
