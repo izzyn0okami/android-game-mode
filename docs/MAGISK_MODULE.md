@@ -1,30 +1,28 @@
-# Módulo Magisk (instalação sem alterar a partição)
+# Módulo Magisk (instalação sem compilar a ROM)
 
-Estado: **não testado em aparelho.** O CI só gera o zip.
+Estado: **não testado em aparelho.** O CI só monta o zip.
 
-O módulo sobrepõe dois arquivos em `/system_ext` sem gravar na partição:
-
-- `priv-app/GameModeService/GameModeService.apk`
-- `etc/permissions/privapp-permissions-com.izzyn0okami.gamemode.service.xml`
-
-O APK do módulo é o build debug (assinado com a chave de debug), suficiente para teste.
+O módulo coloca o serviço em `system_ext/priv-app` por sobreposição do Magisk. Nada é gravado na partição do sistema.
 
 ## Antes de instalar
 
-1. Guarde a imagem de boot original (`boot.img` ou `init_boot.img`) do build instalado, para restaurar com `fastboot`.
-2. Tenha o Argosy instalado.
-3. Confirme que o Magisk em uso suporta Android 17 (Magisk v31.0 anuncia suporte).
+1. Guarde uma cópia do `boot.img` (ou `init_boot.img`) original da sua versão do LineageOS. Ele é a forma garantida de desfazer tudo (`fastboot flash boot boot.img`).
+2. Confirme que a versão do Magisk suporta o seu Android.
 
 ## Instalar
 
-1. Baixe o artefato `android-game-mode-magisk-module` do CI e extraia `gamemode-service-magisk.zip`.
-2. Magisk → Módulos → Instalar do armazenamento → escolha o zip → reinicie.
+1. Baixe o artefato `gamemode-service-magisk-module` do CI e extraia o zip.
+2. Magisk → Módulos → Instalar a partir do armazenamento → escolha `gamemode-service-magisk.zip`.
+3. Reinicie.
+4. Instale o Argosy normalmente.
 
-## Validar
+## Conferir
 
-Siga a lista de `docs/ROM_INTEGRATION.md` (permissão `granted=true`, Argosy abre ao conectar, diálogo ao desconectar, teste com outro app aberto).
+- `adb shell dumpsys package com.izzyn0okami.gamemode.service | grep START_ACTIVITIES_FROM_BACKGROUND` deve mostrar `granted=true`.
+- Conecte um controle com a tela desbloqueada: o Argosy deve abrir.
+- Desconecte: depois de 3 s aparece o diálogo.
 
-## Recuperar
+## Se algo der errado
 
-- Desative ou remova o módulo no Magisk e reinicie.
-- Se o aparelho não der boot: no recovery, apague `/data/adb/modules/gamemode-service` (ou inicie no modo seguro do Magisk) ou grave de volta a imagem de boot original com `fastboot flash`.
+- Desative o módulo no app do Magisk e reinicie.
+- Se o aparelho não ligar: o Magisk desativa módulos no modo seguro do Magisk; se não bastar, reflasheie o `boot.img` original pelo fastboot.

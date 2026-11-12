@@ -69,3 +69,12 @@ jobs:
             service/rom/privapp-permissions-com.izzyn0okami.gamemode.service.xml
           if-no-files-found: error
           retention-days: 14
+      - name: Build Magisk module
+        run: python3 scripts/build_magisk_module.py service/build/outputs/apk/debug/service-debug.apk gamemode-service-magisk.zip
+      - name: Upload Magisk module
+        uses: actions/upload-artifact@v4
+        with:
+          name: gamemode-service-magisk-module
+          path: gamemode-service-magisk.zip
+          if-no-files-found: error
+          retention-days: 14

@@ -3,4 +3,4 @@ name=Game Mode Service
 version=v0.1.0
 versionCode=1
 author=izzyn0okami
-description=Installs the Game Mode service as a privileged system_ext app (opens the frontend when a controller connects).
+description=Abre o Argosy ao conectar o controle e pergunta se deve encerrar ao desconectar.
