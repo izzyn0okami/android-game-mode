@@ -100,3 +100,7 @@ A suíte usa um scheduler de relógio falso e efeitos injetados; não depende de
 - Efeitos sem interface de diálogo mantêm o retorno imediato à HOME.
 
 A inicialização parcial do `GameModeController` deve remover o receiver e interromper monitor/coordenador quando uma etapa falhar. Foi adicionado um teste instrumentado em emulador para validar `start()`/`stop()` idempotentes, remoção do receiver, reinicialização do controlador e ausência de chamadas de frontend/HOME sem controles. O teste não substitui validação física de controles nem cobre BAL/SELinux. O controlador desta etapa ainda não é um serviço persistente e não deve ser tratado como funcionalidade pronta para uso diário.
+
+## Serviço (`:service`)
+
+`ExitPromptPresenter` tem testes JVM em `core`. O CI compila `:service:assembleDebug`. `SystemActionHandler`, `ExitPromptActivity` e o comportamento de BAL no Android 17 não têm teste automatizado: seguir o roteiro de `docs/ROM_INTEGRATION.md` no aparelho.

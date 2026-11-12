@@ -10,10 +10,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import com.izzyn0okami.gamemode.ExitPromptResult
-import com.izzyn0okami.gamemode.GameModeCancellation
 import com.izzyn0okami.gamemode.GameModeCoordinator
 import com.izzyn0okami.gamemode.GameModeEffects
-import com.izzyn0okami.gamemode.GameModeScheduler
 
 /**
  * Android adapter for input-device monitoring and display/lock observation.
@@ -36,17 +34,7 @@ class GameModeController(
     private var started = false
 
     private val coordinator = GameModeCoordinator(
-        scheduler = object : GameModeScheduler {
-            override fun post(task: () -> Unit) {
-                mainHandler.post(Runnable(task))
-            }
-
-            override fun postDelayed(delayMs: Long, task: () -> Unit): GameModeCancellation {
-                val runnable = Runnable(task)
-                mainHandler.postDelayed(runnable, delayMs)
-                return GameModeCancellation { mainHandler.removeCallbacks(runnable) }
-            }
-        },
+        scheduler = MainThreadScheduler(mainHandler),
         effects = object : GameModeEffects {
             override fun launchFrontend(onResult: (success: Boolean) -> Unit) {
                 actionHandler.launchFrontend(onResult)

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Game Mode Service</string>
+    <string name="exit_prompt_title">Controle desconectado</string>
+    <string name="exit_prompt_message">Encerrar o modo jogo e voltar para a tela inicial?</string>
+    <string name="exit_prompt_return_home">Encerrar</string>
+    <string name="exit_prompt_stay">Ficar</string>
+</resources>

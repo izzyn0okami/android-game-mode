@@ -19,6 +19,7 @@ Projeto para integrar ao LineageOS um modo de jogo que alterna entre o launcher 
 ## Estado do projeto
 
 - Núcleo independente: máquina de estados e testes unitários.
+- Serviço persistente (`:service`): abre o frontend (Argosy) ao conectar o controle e pergunta se deve encerrar ao desconectar. Feito para `system_ext/priv-app`; ver `docs/ROM_INTEGRATION.md`. Não validado em aparelho.
 - APK de diagnóstico: primeira implementação Android para observar dispositivos de entrada enquanto o aplicativo está aberto.
 - Integração privilegiada com a ROM: ainda não implementada; depende da auditoria do device tree, permissões, partição e SELinux.
 

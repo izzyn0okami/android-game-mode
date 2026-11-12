@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Install to /system_ext/etc/permissions/ next to the APK in /system_ext/priv-app/GameModeService/ -->
+<permissions>
+    <privapp-permissions package="com.izzyn0okami.gamemode.service">
+        <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND" />
+    </privapp-permissions>
+</permissions>

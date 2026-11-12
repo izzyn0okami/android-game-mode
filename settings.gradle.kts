@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "AndroidGameMode"
-include(":core", ":app", ":runtime")
+include(":core", ":app", ":runtime", ":service")
